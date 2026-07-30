@@ -349,13 +349,11 @@ export default function VacanciesPage() {
       : "all vacancies";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="page">
+      <div className="page-header">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
-            Vacancies
-          </h1>
-          <p className="mt-1 text-muted-foreground">
+          <h1 className="page-title">Vacancies</h1>
+          <p className="page-subtitle">
             {isAgency
               ? "Upload candidates on unfilled open vacancies assigned to your agency."
               : "Click Open / Filled / Closed to filter. Agencies can upload on unfilled vacancies."}
@@ -377,7 +375,7 @@ export default function VacanciesPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="page-grid grid-cols-1 sm:grid-cols-3">
         <Stat
           label="Open"
           value={statusCounts.open}
@@ -425,7 +423,7 @@ export default function VacanciesPage() {
           <table className="w-full text-sm">
             <thead>
               {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id} className="border-b border-border/60 text-left text-muted-foreground">
+                <tr key={hg.id} className="border-b border-black/[0.06] text-left text-muted-foreground">
                   {hg.headers.map((h) => (
                     <th key={h.id} className="px-3 py-2 font-medium">
                       {flexRender(h.column.columnDef.header, h.getContext())}
@@ -441,8 +439,8 @@ export default function VacanciesPage() {
                   <tr
                     key={row.id}
                     className={cn(
-                      "cursor-pointer border-b border-border/40 hover:bg-muted/30",
-                      active && "bg-primary/5"
+                      "cursor-pointer border-b border-black/[0.04] hover:bg-muted/40",
+                      active && "bg-muted shadow-neo-inset"
                     )}
                     onClick={() =>
                       setSelectedVacancyId((id) =>
@@ -535,7 +533,7 @@ export default function VacanciesPage() {
                 key={c.id}
                 type="button"
                 onClick={() => setSelected(c.id)}
-                className="flex w-full items-center gap-3 rounded-2xl border border-border/50 bg-muted/20 px-3 py-3 text-left transition hover:bg-muted/40"
+                className="flex w-full items-center gap-3 rounded-[22px] bg-card px-3 py-3 text-left shadow-neo-sm transition hover:shadow-neo-xs"
               >
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={c.photoUrl} />
@@ -680,10 +678,10 @@ export default function VacanciesPage() {
                             : [...form.agencyIds, a.id],
                         })
                       }
-                      className={`rounded-full border px-3 py-1 text-xs ${
+                      className={`rounded-full px-3 py-1.5 text-xs transition-shadow ${
                         selected
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground"
+                          ? "bg-card text-foreground shadow-neo-inset"
+                          : "bg-card text-muted-foreground shadow-neo-xs"
                       }`}
                     >
                       {a.name}
@@ -806,17 +804,17 @@ function Stat({
   onClick?: () => void;
 }) {
   return (
-    <button type="button" onClick={onClick} className="text-left">
+    <button type="button" onClick={onClick} className="w-full text-left">
       <Card
         className={cn(
-          "transition hover:shadow-neo",
-          active && "border-primary/40 ring-2 ring-primary/40"
+          "transition-shadow",
+          active ? "shadow-neo-inset" : "shadow-neo hover:shadow-neo-sm"
         )}
       >
         <CardContent className="p-5">
           <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="mt-1 text-[11px] text-primary">
+          <p className="text-2xl font-bold tracking-tight">{value}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
             {active ? "Filtering · click to clear" : "Click to filter"}
           </p>
         </CardContent>

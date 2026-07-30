@@ -34,7 +34,7 @@ import { formatDate } from "@/lib/utils";
 import { getStageDefinition } from "@/lib/workflow";
 import { motion } from "framer-motion";
 
-const COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#1d4ed8", "#38bdf8", "#0ea5e9"];
+const COLORS = ["#4b5563", "#6b7280", "#9ca3af", "#374151", "#d1d5db", "#1f2937"];
 
 export default function DashboardPage() {
   const candidates = useAppStore((s) => s.candidates);
@@ -60,13 +60,13 @@ export default function DashboardPage() {
           label: "Offer letter from RM",
           value: scoped.filter((c) => c.currentStage === "offer_from_rm").length,
           icon: Briefcase,
-          tone: "text-blue-600",
+          tone: "text-foreground",
         },
         {
           label: "Pre-approved MOL",
           value: scoped.filter((c) => c.currentStage === "preapproved_mol_agency").length,
           icon: Clock,
-          tone: "text-orange-600",
+          tone: "text-foreground",
         },
         {
           label: "Agency Queue",
@@ -74,7 +74,7 @@ export default function DashboardPage() {
             ["offer_from_rm", "preapproved_mol_agency"].includes(c.currentStage)
           ).length,
           icon: Users,
-          tone: "text-primary",
+          tone: "text-foreground",
         },
         {
           label: "Open Vacancies",
@@ -84,7 +84,7 @@ export default function DashboardPage() {
               (!user?.agencyId || v.agencyIds.includes(user.agencyId))
           ).length,
           icon: Building2,
-          tone: "text-sky-600",
+          tone: "text-foreground",
         },
       ];
     }
@@ -95,13 +95,13 @@ export default function DashboardPage() {
           label: "Stage 1 — Signed Offer",
           value: scoped.filter((c) => c.currentStage === "signed_offer_docs").length,
           icon: Briefcase,
-          tone: "text-amber-600",
+          tone: "text-foreground",
         },
         {
           label: "Stage 2 — Nawakis",
           value: scoped.filter((c) => c.currentStage === "stage2_signed_nawakis").length,
           icon: Clock,
-          tone: "text-red-500",
+          tone: "text-foreground",
         },
         {
           label: "PRO Queue Total",
@@ -109,7 +109,7 @@ export default function DashboardPage() {
             ["signed_offer_docs", "stage2_signed_nawakis"].includes(c.currentStage)
           ).length,
           icon: Users,
-          tone: "text-primary",
+          tone: "text-foreground",
         },
         {
           label: "MOHRE Pending",
@@ -117,13 +117,13 @@ export default function DashboardPage() {
             ["mohre_approved", "upload_preapproved_mol"].includes(c.currentStage)
           ).length,
           icon: FileWarning,
-          tone: "text-violet-600",
+          tone: "text-foreground",
         },
         {
           label: "ICP / Visa",
           value: scoped.filter((c) => c.currentStage === "upload_visa").length,
           icon: Plane,
-          tone: "text-teal-600",
+          tone: "text-foreground",
         },
         {
           label: "Rejected",
@@ -137,16 +137,16 @@ export default function DashboardPage() {
     const openVacancies = vacancies.filter((v) => v.status === "open").length;
     const filledVacancies = vacancies.filter((v) => v.status === "filled").length;
     return [
-      { label: "Open Vacancies", value: openVacancies, icon: Briefcase, tone: "text-blue-600" },
-      { label: "Filled Vacancies", value: filledVacancies, icon: CheckCircle2, tone: "text-emerald-600" },
-      { label: "Total Candidates", value: scoped.length, icon: Users, tone: "text-indigo-600" },
+      { label: "Open Vacancies", value: openVacancies, icon: Briefcase, tone: "text-foreground" },
+      { label: "Filled Vacancies", value: filledVacancies, icon: CheckCircle2, tone: "text-foreground" },
+      { label: "Total Candidates", value: scoped.length, icon: Users, tone: "text-foreground" },
       {
         label: "Visa Issued",
         value: scoped.filter((c) =>
           ["upload_visa", "flight_bookings", "completed"].includes(c.currentStage)
         ).length,
         icon: Plane,
-        tone: "text-teal-600",
+        tone: "text-foreground",
       },
       {
         label: "Rejected",
@@ -162,13 +162,13 @@ export default function DashboardPage() {
           )
         ).length,
         icon: Clock,
-        tone: "text-amber-600",
+        tone: "text-foreground",
       },
       {
         label: "ICP / Visa Pending",
         value: scoped.filter((c) => c.currentStage === "upload_visa").length,
         icon: FileWarning,
-        tone: "text-violet-600",
+        tone: "text-foreground",
       },
       {
         label: "Agency Pending",
@@ -176,7 +176,7 @@ export default function DashboardPage() {
           ["cv_received", "offer_from_rm", "preapproved_mol_agency"].includes(c.currentStage)
         ).length,
         icon: Building2,
-        tone: "text-sky-600",
+        tone: "text-foreground",
       },
       {
         label: "Processing",
@@ -230,12 +230,12 @@ export default function DashboardPage() {
   }, [agencies, scoped]);
 
   return (
-    <div className="space-y-6">
+    <div className="page">
       <div>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="page-title">
           {isAgency ? "Agency Dashboard" : isPro ? "PRO Dashboard" : "Dashboard"}
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="page-subtitle">
           {isAgency
             ? "Offer letters from RM and pre-approved MOL tasks for your agency."
             : isPro
@@ -244,7 +244,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+      <div className="page-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {kpis.map((k, i) => {
           const Icon = k.icon;
           return (
@@ -253,15 +253,18 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
+              className="min-w-0"
             >
-              <Card className="neo-card">
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 ${k.tone}`}>
+              <Card className="h-full">
+                <CardContent className="flex h-full items-center gap-3 p-4 sm:gap-4 sm:p-5">
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card shadow-neo-xs ${k.tone}`}
+                  >
                     <Icon className="h-5 w-5" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{k.label}</p>
-                    <p className="text-2xl font-bold tracking-tight">{k.value}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs text-muted-foreground">{k.label}</p>
+                    <p className="text-2xl font-bold tracking-tight leading-none mt-1">{k.value}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -270,8 +273,8 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+      <div className="page-grid grid-cols-1 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Monthly Visa Issued</CardTitle>
             <CardDescription>Trend of successful visa issuances</CardDescription>
@@ -281,15 +284,15 @@ export default function DashboardPage() {
               <AreaChart data={monthlyVisa}>
                 <defs>
                   <linearGradient id="visaFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#4b5563" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#4b5563" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Area type="monotone" dataKey="issued" stroke="#2563eb" fill="url(#visaFill)" strokeWidth={2} />
+                <Area type="monotone" dataKey="issued" stroke="#4b5563" fill="url(#visaFill)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -314,7 +317,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="xl:col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Pipeline Analytics</CardTitle>
             <CardDescription>Candidates by current stage</CardDescription>
@@ -322,11 +325,11 @@ export default function DashboardPage() {
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stageData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" radius={[10, 10, 0, 0]} />
+                <Bar dataKey="value" fill="#6b7280" radius={[10, 10, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -340,11 +343,11 @@ export default function DashboardPage() {
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={agencyPerf} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
                 <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Bar dataKey="success" fill="#60a5fa" radius={[0, 10, 10, 0]} />
+                <Bar dataKey="success" fill="#9ca3af" radius={[0, 10, 10, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -357,20 +360,22 @@ export default function DashboardPage() {
           <CardDescription>Latest pipeline events</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {activities.slice(0, 10).map((a) => (
               <div
                 key={a.id}
-                className="flex items-center justify-between rounded-2xl border border-border/50 bg-muted/20 px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-[20px] bg-card px-4 py-3 shadow-neo-sm"
               >
-                <div>
-                  <p className="text-sm font-medium">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
                     {a.actor} {a.action}
                     {a.candidateName ? ` — ${a.candidateName}` : ""}
                   </p>
                   <p className="text-xs text-muted-foreground">{formatDate(a.timestamp)}</p>
                 </div>
-                <Badge variant="outline">{a.type}</Badge>
+                <Badge variant="outline" className="shrink-0">
+                  {a.type}
+                </Badge>
               </div>
             ))}
           </div>

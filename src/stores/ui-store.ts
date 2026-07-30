@@ -15,7 +15,7 @@ interface UIState {
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
-      sidebarCollapsed: false,
+      sidebarCollapsed: true,
       theme: "light",
       toggleSidebar: () => set({ sidebarCollapsed: !get().sidebarCollapsed }),
       setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),

@@ -33,31 +33,28 @@ export default function PipelinePage() {
       ? "Offer letter from RM · Pre approved MOL offer letters. Download and upload signed documents."
       : "Drag candidates across workflow stages. Click a card for full history and actions.";
 
+  const filterCols = isPro || isAgency ? "lg:grid-cols-4" : "lg:grid-cols-3 xl:grid-cols-6";
+
   return (
-    <div className="space-y-6">
+    <div className="page">
       <div>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
-          {title}
-        </h1>
-        <p className="mt-1 text-muted-foreground">{subtitle}</p>
+        <h1 className="page-title">{title}</h1>
+        <p className="page-subtitle">{subtitle}</p>
       </div>
 
       <Card>
-        <CardContent
-          className={`grid gap-3 p-4 md:grid-cols-2 ${
-            isPro || isAgency ? "xl:grid-cols-4" : "xl:grid-cols-6"
-          }`}
-        >
+        <CardContent className={`grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 ${filterCols}`}>
           <Input
             placeholder="Search pipeline..."
             value={globalSearch}
             onChange={(e) => setSearch(e.target.value)}
+            className="h-11 min-w-0"
           />
           <Select
             value={filters.nationality || "all"}
             onValueChange={(v) => setFilters({ nationality: v === "all" ? "" : v })}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-11 w-full">
               <SelectValue placeholder="Nationality" />
             </SelectTrigger>
             <SelectContent>
@@ -74,7 +71,7 @@ export default function PipelinePage() {
               value={filters.agencyId || "all"}
               onValueChange={(v) => setFilters({ agencyId: v === "all" ? "" : v })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-11 w-full">
                 <SelectValue placeholder="Agency" />
               </SelectTrigger>
               <SelectContent>
@@ -92,7 +89,7 @@ export default function PipelinePage() {
               value={filters.jobRole || "all"}
               onValueChange={(v) => setFilters({ jobRole: v === "all" ? "" : v })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-11 w-full">
                 <SelectValue placeholder="Job Role" />
               </SelectTrigger>
               <SelectContent>
@@ -109,7 +106,7 @@ export default function PipelinePage() {
             value={filters.stage || "all"}
             onValueChange={(v) => setFilters({ stage: v === "all" ? "" : v })}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-11 w-full">
               <SelectValue placeholder="Stage" />
             </SelectTrigger>
             <SelectContent>
@@ -124,6 +121,7 @@ export default function PipelinePage() {
           </Select>
           <Button
             variant="outline"
+            className="h-11 w-full"
             onClick={() => {
               setFilters({
                 nationality: "",

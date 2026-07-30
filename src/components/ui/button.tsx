@@ -4,30 +4,36 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-neo hover:bg-primary/90",
+          "rounded-full bg-primary text-primary-foreground shadow-neo-sm hover:opacity-95",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-neo-sm hover:bg-secondary/80",
+          "rounded-full bg-card text-foreground shadow-neo-sm hover:shadow-neo-xs",
         outline:
-          "border border-border bg-card/60 shadow-neo-sm hover:bg-accent hover:text-accent-foreground",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "rounded-full bg-card text-foreground shadow-neo-sm hover:shadow-neo-xs",
+        ghost:
+          "rounded-full text-muted-foreground hover:text-foreground hover:shadow-neo-xs",
         destructive:
-          "bg-destructive text-white shadow-neo-sm hover:bg-destructive/90",
-        soft: "bg-primary/10 text-primary hover:bg-primary/15",
+          "rounded-full bg-destructive text-white shadow-neo-sm hover:opacity-95",
+        soft:
+          "rounded-full bg-card text-foreground shadow-neo-sm hover:shadow-neo-xs",
+        neo:
+          "rounded-full bg-card text-foreground shadow-neo-sm hover:shadow-neo-xs active:shadow-neo-inset",
+        inset:
+          "rounded-full bg-card text-foreground shadow-neo-inset",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 rounded-xl px-3 text-xs",
-        lg: "h-12 rounded-2xl px-6 text-base",
-        icon: "h-10 w-10",
+        default: "h-11 px-5 py-2",
+        sm: "h-9 rounded-full px-4 text-xs",
+        lg: "h-12 rounded-full px-7 text-base",
+        icon: "h-11 w-11 rounded-full",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "neo",
       size: "default",
     },
   }

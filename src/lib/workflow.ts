@@ -49,7 +49,7 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     roles: ["admin"],
     decision: true,
     rejectionReasons: ["Profile mismatch", "Document issue", "Not suitable"],
-    color: "#3B82F6",
+    color: "#64748b",
     actions: [
       { id: "reject", label: "Rejected", type: "reject" },
       {
@@ -74,7 +74,7 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
       "Police Clearance",
     ],
     roles: ["agency", "admin"],
-    color: "#60A5FA",
+    color: "#94a3b8",
     actions: [
       { id: "download_offer", label: "Download offer letter", type: "download" },
       {

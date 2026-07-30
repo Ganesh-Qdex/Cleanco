@@ -15,15 +15,15 @@ export default function SettingsPage() {
   const candidates = useAppStore((s) => s.candidates);
 
   return (
-    <div className="space-y-6">
+    <div className="page">
       <div>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="page-title">
           Settings
         </h1>
-        <p className="mt-1 text-muted-foreground">Preferences, roles, and workflow reference.</p>
+        <p className="page-subtitle">Preferences, roles, and workflow reference.</p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="page-grid grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
@@ -66,9 +66,9 @@ export default function SettingsPage() {
           <CardContent>
             <div className="grid gap-2 sm:grid-cols-2">
               {WORKFLOW_STAGES.filter((s) => s.id !== "rejected" && s.id !== "completed").map((s) => (
-                <div key={s.id} className="rounded-2xl border border-border/50 px-3 py-2">
+                <div key={s.id} className="rounded-[18px] bg-card px-3 py-2 shadow-neo-xs">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-card text-xs font-bold text-foreground shadow-neo-xs">
                       {s.order}
                     </span>
                     <p className="text-sm font-medium">{s.label}</p>
@@ -78,7 +78,7 @@ export default function SettingsPage() {
                     {s.fee ? ` · Fee ${s.fee} AED` : ""}
                   </p>
                   {s.actions.length > 0 && (
-                    <p className="mt-1 text-[11px] text-primary/80">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       Actions: {s.actions.map((a) => a.label).join(" · ")}
                     </p>
                   )}

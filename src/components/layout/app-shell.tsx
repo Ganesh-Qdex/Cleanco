@@ -37,8 +37,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, pathname, router, hydrated]);
 
-  // Identical on server + first client paint — avoids hydration mismatches
-  // from Zustand persist, locale dates, and Framer Motion.
   if (!hydrated) {
     return <BootSplash />;
   }
@@ -52,23 +50,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Sidebar />
       <div
         className={cn(
-          "transition-all duration-300",
-          sidebarCollapsed ? "lg:pl-[76px]" : "lg:pl-[260px]"
+          "min-h-screen transition-[padding] duration-300",
+          sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[240px]"
         )}
       >
         <Header />
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="w-full px-4 pb-6 pt-1 sm:px-6 sm:pb-8 lg:px-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.22 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="w-full"
             >
               {children}
             </motion.div>

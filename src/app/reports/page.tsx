@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAppStore } from "@/stores/app-store";
 import { daysBetween } from "@/lib/utils";
 
-const COLORS = ["#2563eb", "#60a5fa", "#34d399", "#f59e0b", "#ef4444", "#8b5cf6"];
+const COLORS = ["#4b5563", "#6b7280", "#9ca3af", "#374151", "#d1d5db", "#1f2937"];
 
 export default function ReportsPage() {
   const candidates = useAppStore((s) => s.candidates);
@@ -100,24 +100,24 @@ export default function ReportsPage() {
   }, [candidates, agencies, vacancies]);
 
   return (
-    <div className="space-y-6">
+    <div className="page">
       <div>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="page-title">
           Reports
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="page-subtitle">
           Visa success, processing time, agency and government analytics.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="page-grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <Metric title="Visa Success Rate" value={`${stats.successRate}%`} />
         <Metric title="Avg Processing Time" value={`${stats.avgDays} days`} />
         <Metric title="Pending Gov Cases" value={String(stats.govPending)} />
         <Metric title="Payment Pending" value={String(stats.paymentPending)} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="page-grid grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Rejection Analysis</CardTitle>
@@ -165,7 +165,7 @@ export default function ReportsPage() {
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
                 <YAxis domain={[0, 100]} />
                 <Tooltip />
-                <Bar dataKey="rate" fill="#3b82f6" radius={[10, 10, 0, 0]} />
+                <Bar dataKey="rate" fill="#6b7280" radius={[10, 10, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

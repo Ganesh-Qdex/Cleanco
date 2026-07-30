@@ -60,25 +60,25 @@ export default function PaymentsPage() {
   }, [labour, mohre, icp]);
 
   return (
-    <div className="space-y-6">
+    <div className="page">
       <div>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="page-title">
           Payments
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="page-subtitle">
           Government fee tracking — 50 / 1800 / 800 AED.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">Labour Fees Paid</p><p className="text-2xl font-bold">{formatCurrency(totals.labour)}</p></CardContent></Card>
-        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">MOHRE Fees Paid</p><p className="text-2xl font-bold">{formatCurrency(totals.mohre)}</p></CardContent></Card>
-        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">ICP Fees Paid</p><p className="text-2xl font-bold">{formatCurrency(totals.icp)}</p></CardContent></Card>
-        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">Pending Payments</p><p className="text-2xl font-bold">{totals.pendingCount}</p></CardContent></Card>
+      <div className="page-grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">Labour Fees Paid</p><p className="mt-1 text-2xl font-bold leading-none">{formatCurrency(totals.labour)}</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">MOHRE Fees Paid</p><p className="mt-1 text-2xl font-bold leading-none">{formatCurrency(totals.mohre)}</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">ICP Fees Paid</p><p className="mt-1 text-2xl font-bold leading-none">{formatCurrency(totals.icp)}</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-xs text-muted-foreground">Pending Payments</p><p className="mt-1 text-2xl font-bold leading-none">{totals.pendingCount}</p></CardContent></Card>
       </div>
 
-      <Tabs defaultValue="mohre">
-        <TabsList>
+      <Tabs defaultValue="mohre" className="w-full">
+        <TabsList className="w-full">
           <TabsTrigger value="labour">Labour (50)</TabsTrigger>
           <TabsTrigger value="mohre">MOHRE (1800)</TabsTrigger>
           <TabsTrigger value="icp">ICP (800)</TabsTrigger>
@@ -98,7 +98,7 @@ export default function PaymentsPage() {
                   <button
                     key={`${r.id}-${r.type}`}
                     onClick={() => setSelected(r.id)}
-                    className="flex w-full items-center justify-between rounded-2xl border border-border/50 px-4 py-3 text-left hover:bg-muted/30"
+                    className="flex w-full items-center justify-between rounded-[20px] bg-card px-4 py-3 text-left shadow-neo-sm transition hover:shadow-neo-xs"
                   >
                     <div>
                       <p className="text-sm font-medium">{r.name}</p>

@@ -32,21 +32,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_#dbeafe_0%,_transparent_55%),radial-gradient(ellipse_at_bottom_right,_#e2e8f0_0%,_transparent_50%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(37,99,235,0.2)_0%,_transparent_55%)]" />
-
-      <div className="relative z-10 w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[20px] bg-primary text-xl font-bold text-white shadow-neo">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-6">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center sm:mb-10">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-card text-xl font-bold text-foreground shadow-neo">
             C
           </div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight">
+          <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-foreground">
             Cleanco
           </h1>
-          <p className="mt-2 text-muted-foreground">Pipeline Management System</p>
+          <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+            Pipeline Management System
+          </p>
         </div>
 
-        <Card className="glass-panel border-white/30">
+        <Card>
           <CardHeader>
             <CardTitle>Sign in</CardTitle>
             <CardDescription>Enter your Cleanco email. No password required.</CardDescription>
@@ -64,13 +64,13 @@ export default function LoginPage() {
                   placeholder="admin@cleanco.com"
                 />
               </div>
-              <Button type="submit" className="w-full" size="lg">
+              <Button type="submit" variant="default" className="w-full" size="lg">
                 Continue
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </form>
 
-            <div className="mt-6 space-y-2">
+            <div className="mt-6 space-y-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Quick access
               </p>
@@ -88,10 +88,10 @@ export default function LoginPage() {
                         router.push("/dashboard");
                       }
                     }}
-                    className="flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-background/50 px-3 py-2.5 text-left transition hover:bg-accent/50"
+                    className="flex w-full items-center gap-3 rounded-full bg-card px-3 py-3 text-left shadow-neo-sm transition hover:shadow-neo-xs"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
-                      <Icon className="h-4 w-4 text-primary" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-neo-xs">
+                      <Icon className="h-4 w-4 text-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-medium">{d.role}</p>

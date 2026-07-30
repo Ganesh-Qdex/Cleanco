@@ -276,7 +276,7 @@ export function CandidateDrawer() {
                   </TabsList>
 
                   <TabsContent value="action" className="space-y-4">
-                    <div className="rounded-2xl border border-border/60 bg-muted/40 p-4">
+                    <div className="rounded-[22px] bg-card p-4 shadow-neo-inset">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Current Stage
                       </p>
@@ -384,7 +384,7 @@ export function CandidateDrawer() {
                   </TabsContent>
 
                   <TabsContent value="timeline">
-                    <ol className="relative ml-3 space-y-4 border-l border-border/70">
+                    <ol className="relative ml-3 space-y-4 border-l border-black/10">
                       {candidate.history.map((h) => {
                         const def = getStageDefinition(h.stage);
                         const Icon =
@@ -406,7 +406,7 @@ export function CandidateDrawer() {
                                 }
                               />
                             </span>
-                            <div className="rounded-2xl border border-border/50 bg-card/60 p-3">
+                            <div className="rounded-[20px] bg-card p-3 shadow-neo-sm">
                               <p className="text-sm font-medium">{def?.label || h.stage}</p>
                               <p className="mt-0.5 text-xs text-muted-foreground">
                                 {formatDate(h.enteredAt)}
@@ -435,9 +435,9 @@ export function CandidateDrawer() {
                     {candidate.documents.map((d) => (
                       <div
                         key={d.id}
-                        className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/70 p-3 shadow-neo-sm"
+                        className="flex items-center gap-3 rounded-[20px] bg-card p-3 shadow-neo-sm"
                       >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-neo-xs">
                           <FileText className="h-5 w-5 text-primary" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -524,7 +524,7 @@ function InfoChip({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/50 bg-muted/30 p-3">
+    <div className="rounded-[20px] bg-card p-3 shadow-neo-inset">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Icon className="h-3.5 w-3.5" />
         {label}
@@ -550,7 +550,7 @@ function PaymentRow({
   delay?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 p-3">
+    <div className="rounded-[20px] bg-card p-3 shadow-neo-sm">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{label}</p>
         <Badge

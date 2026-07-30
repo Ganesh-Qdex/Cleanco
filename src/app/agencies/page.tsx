@@ -37,28 +37,28 @@ export default function AgenciesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="page">
+      <div className="page-header">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="page-title">
             Agencies
           </h1>
-          <p className="mt-1 text-muted-foreground">Recruitment agency partners and performance.</p>
+          <p className="page-subtitle">Recruitment agency partners and performance.</p>
         </div>
         <Button onClick={() => setOpen(true)}>
           <Plus className="h-4 w-4" /> Add Agency
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="page-grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
         {agencies.map((a) => (
-          <Card key={a.id} className="neo-card">
+          <Card key={a.id} className="h-full">
             <CardHeader className="flex flex-row items-start justify-between space-y-0">
-              <div>
+              <div className="min-w-0">
                 <CardTitle className="text-base">{a.name}</CardTitle>
                 <p className="mt-1 text-xs text-muted-foreground">{a.country}</p>
               </div>
-              <Badge variant={a.status === "active" ? "success" : "muted"}>{a.status}</Badge>
+              <Badge variant={a.status === "active" ? "success" : "muted"} className="shrink-0">{a.status}</Badge>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p><span className="text-muted-foreground">Contact:</span> {a.contactPerson}</p>

@@ -265,20 +265,20 @@ function PipelineColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex shrink-0 flex-col rounded-[20px] border border-border/50 bg-muted/30 shadow-inner-soft",
-        wide ? "w-[420px]" : "w-[300px]",
-        showRejectionInfo && "border-red-500/30 bg-red-500/5",
-        isOver && "ring-2 ring-primary/40"
+        "flex shrink-0 flex-col rounded-[24px] bg-card shadow-neo-inset",
+        wide ? "w-[min(380px,88vw)] sm:w-[360px]" : "w-[min(280px,88vw)] sm:w-[280px]",
+        showRejectionInfo && "shadow-[inset_6px_6px_12px_#e8c8c8,inset_-6px_-6px_12px_#ffffff]",
+        isOver && "ring-2 ring-primary/25"
       )}
     >
-      <div className="flex items-start justify-between gap-2 px-3 py-3">
-        <div className="flex min-w-0 items-start gap-2">
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
           <span
-            className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
             style={{ background: color }}
           />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold leading-snug">{title}</h3>
+            <h3 className="truncate text-sm font-semibold leading-snug">{title}</h3>
             {showRejectionInfo && (
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Stage rejected from + reason
@@ -290,8 +290,8 @@ function PipelineColumn({
           {count}
         </Badge>
       </div>
-      <ScrollArea className="h-[calc(100vh-260px)] px-2 pb-3">
-        <div className="space-y-2">
+      <ScrollArea className="h-[calc(100vh-280px)] px-3 pb-3">
+        <div className="space-y-2.5">
           {candidates.slice(0, 40).map((c) => (
             <DraggableCard
               key={c.id}
@@ -368,20 +368,20 @@ function CandidateCard({
       layout
       onClick={onClick}
       className={cn(
-        "cursor-pointer rounded-2xl border border-border/60 bg-card p-3 shadow-neo-sm transition hover:shadow-neo",
-        showRejectionInfo && "border-red-500/25",
-        dragging && "rotate-2 shadow-glass"
+        "cursor-pointer rounded-[20px] bg-card p-3.5 shadow-neo-sm transition hover:shadow-neo",
+        showRejectionInfo && "ring-1 ring-red-300/40",
+        dragging && "rotate-1 shadow-neo"
       )}
     >
-      <div className="flex items-start gap-2">
-        <GripVertical className="mt-1 h-4 w-4 text-muted-foreground/50" />
-        <Avatar className="h-9 w-9">
+      <div className="flex items-center gap-2.5">
+        <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+        <Avatar className="h-9 w-9 shrink-0">
           <AvatarImage src={candidate.photoUrl} />
           <AvatarFallback className="text-xs">{initials(candidate.name)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{candidate.name}</p>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="truncate text-sm font-semibold leading-tight">{candidate.name}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {candidate.nationality} · {candidate.jobRole}
           </p>
         </div>
@@ -419,9 +419,9 @@ function CandidateCard({
         </div>
       )}
 
-      <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span className="truncate">{agencyName}</span>
-        <span className="flex items-center gap-1">
+      <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+        <span className="min-w-0 truncate">{agencyName}</span>
+        <span className="flex shrink-0 items-center gap-1">
           <Clock className="h-3 w-3" />
           {days}d
         </span>
