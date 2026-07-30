@@ -375,7 +375,7 @@ export default function VacanciesPage() {
         </div>
       </div>
 
-      <div className="page-grid grid-cols-1 sm:grid-cols-3">
+      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
         <Stat
           label="Open"
           value={statusCounts.open}
@@ -804,21 +804,39 @@ function Stat({
   onClick?: () => void;
 }) {
   return (
-    <button type="button" onClick={onClick} className="w-full text-left">
-      <Card
+    <button
+      type="button"
+      onClick={onClick}
+      className="group min-w-0 w-full text-left"
+    >
+      <div
         className={cn(
-          "transition-shadow",
+          "flex h-full min-h-[104px] w-full flex-col justify-between rounded-[24px] bg-card p-5 transition-shadow",
           active ? "shadow-neo-inset" : "shadow-neo hover:shadow-neo-sm"
         )}
       >
-        <CardContent className="p-5">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold tracking-tight">{value}</p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            {active ? "Filtering · click to clear" : "Click to filter"}
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <span
+            className={cn(
+              "mt-1 h-2 w-2 shrink-0 rounded-full",
+              label === "Open" && "bg-emerald-500",
+              label === "Filled" && "bg-sky-500",
+              label === "Closed" && "bg-zinc-400",
+              active && "ring-2 ring-offset-2 ring-offset-card",
+              active && label === "Open" && "ring-emerald-500/40",
+              active && label === "Filled" && "ring-sky-500/40",
+              active && label === "Closed" && "ring-zinc-400/40"
+            )}
+          />
+        </div>
+        <div className="mt-3 flex items-end justify-between gap-2">
+          <p className="text-3xl font-bold tracking-tight leading-none">{value}</p>
+          <p className="pb-0.5 text-right text-[11px] leading-tight text-muted-foreground">
+            {active ? "Filtering · clear" : "Click to filter"}
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </button>
   );
 }

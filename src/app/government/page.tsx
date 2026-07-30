@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StatCard, StatsRow } from "@/components/ui/stat-card";
 import { useAppStore } from "@/stores/app-store";
 import { getStageDefinition } from "@/lib/workflow";
 import { formatDate, initials } from "@/lib/utils";
@@ -48,19 +49,22 @@ export default function GovernmentPage() {
         </p>
       </div>
 
-      <div className="page-grid grid-cols-1 sm:grid-cols-3">
-        <Stat title="MOHRE Pending" value={mohre.pending.length} />
-        <Stat title="ICP Pending" value={icp.pending.length} />
-        <Stat title="Gov. Rejections" value={mohre.rejected.length + icp.rejected.length} />
-      </div>
+      <StatsRow columns={3}>
+        <StatCard label="MOHRE Pending" value={mohre.pending.length} />
+        <StatCard label="ICP Pending" value={icp.pending.length} />
+        <StatCard
+          label="Gov. Rejections"
+          value={mohre.rejected.length + icp.rejected.length}
+        />
+      </StatsRow>
 
-      <Tabs defaultValue="mohre" className="w-full">
-        <TabsList className="w-full max-w-full">
+      <Tabs defaultValue="mohre" className="w-full space-y-4">
+        <TabsList>
           <TabsTrigger value="mohre">MOHRE</TabsTrigger>
           <TabsTrigger value="icp">ICP</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="mohre" className="mt-4">
+        <TabsContent value="mohre" className="mt-0">
           <GovTabs
             pending={mohre.pending}
             approved={mohre.approved}
@@ -69,7 +73,7 @@ export default function GovernmentPage() {
             rejectionKey="mohre"
           />
         </TabsContent>
-        <TabsContent value="icp" className="mt-4">
+        <TabsContent value="icp" className="mt-0">
           <GovTabs
             pending={icp.pending}
             approved={icp.approved}
@@ -80,17 +84,6 @@ export default function GovernmentPage() {
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-function Stat({ title, value }: { title: string; value: number }) {
-  return (
-    <Card className="h-full">
-      <CardContent className="flex flex-col justify-center p-5">
-        <p className="text-xs text-muted-foreground">{title}</p>
-        <p className="mt-1 text-2xl font-bold leading-none">{value}</p>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -108,8 +101,8 @@ function GovTabs({
   rejectionKey: "mohre" | "icp";
 }) {
   return (
-    <Tabs defaultValue="pending" className="w-full">
-      <TabsList className="w-full">
+    <Tabs defaultValue="pending" className="w-full space-y-4">
+      <TabsList>
         <TabsTrigger value="pending">Pending ({pending.length})</TabsTrigger>
         <TabsTrigger value="approved">Approved ({approved.length})</TabsTrigger>
         <TabsTrigger value="rejected">Rejected ({rejected.length})</TabsTrigger>
@@ -117,12 +110,12 @@ function GovTabs({
       {(["pending", "approved", "rejected"] as const).map((tab) => {
         const list = tab === "pending" ? pending : tab === "approved" ? approved : rejected;
         return (
-          <TabsContent key={tab} value={tab} className="mt-4">
+          <TabsContent key={tab} value={tab} className="mt-0">
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader>
                 <CardTitle className="capitalize text-base">{tab} Cases</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 pt-0">
                 {list.slice(0, 50).map((c) => (
                   <button
                     key={c.id}
