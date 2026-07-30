@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAppStore } from "@/stores/app-store";
-import { COUNTRIES, JOB_ROLES, PIPELINE_COLUMNS } from "@/lib/workflow";
+import { useAuthStore } from "@/stores/auth-store";
+import { COUNTRIES, JOB_ROLES, getPipelineColumnsForRole } from "@/lib/workflow";
 import { Button } from "@/components/ui/button";
 
 export default function PipelinePage() {
@@ -20,20 +21,27 @@ export default function PipelinePage() {
   const setFilters = useAppStore((s) => s.setFilters);
   const setSearch = useAppStore((s) => s.setSearch);
   const globalSearch = useAppStore((s) => s.globalSearch);
+  const user = useAuthStore((s) => s.user);
+  const isPro = user?.role === "pro";
+  const columns = getPipelineColumnsForRole(user?.role || "admin");
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
-          Pipeline
+          {isPro ? "PRO Pipeline" : "Pipeline"}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Drag candidates across workflow stages. Click a card for full history and actions.
+          {isPro
+            ? "Stage 1 — Signed offer with docs · Stage 2 — Signed offers / Nawakis. Click a card for Create MOL, Download, Modify."
+            : "Drag candidates across workflow stages. Click a card for full history and actions."}
         </p>
       </div>
 
       <Card>
-        <CardContent className="grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-6">
+        <CardContent
+          className={`grid gap-3 p-4 md:grid-cols-2 ${isPro ? "xl:grid-cols-4" : "xl:grid-cols-6"}`}
+        >
           <Input
             placeholder="Search pipeline..."
             value={globalSearch}
@@ -71,22 +79,24 @@ export default function PipelinePage() {
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={filters.jobRole || "all"}
-            onValueChange={(v) => setFilters({ jobRole: v === "all" ? "" : v })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Job Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {JOB_ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isPro && (
+            <Select
+              value={filters.jobRole || "all"}
+              onValueChange={(v) => setFilters({ jobRole: v === "all" ? "" : v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Job Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {JOB_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Select
             value={filters.stage || "all"}
             onValueChange={(v) => setFilters({ stage: v === "all" ? "" : v })}
@@ -96,12 +106,12 @@ export default function PipelinePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Stages</SelectItem>
-              {PIPELINE_COLUMNS.map((s) => (
+              {columns.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.shortLabel}
                 </SelectItem>
               ))}
-              <SelectItem value="rejected">Rejected</SelectItem>
+              {!isPro && <SelectItem value="rejected">Rejected</SelectItem>}
             </SelectContent>
           </Select>
           <Button

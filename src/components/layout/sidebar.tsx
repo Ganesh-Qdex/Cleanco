@@ -27,12 +27,12 @@ const NAV: {
   roles: UserRole[];
 }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "pro", "agency"] },
-  { href: "/vacancies", label: "Vacancies", icon: Briefcase, roles: ["admin", "pro", "agency"] },
+  { href: "/vacancies", label: "Vacancies", icon: Briefcase, roles: ["admin", "agency"] },
   { href: "/pipeline", label: "Pipeline", icon: Kanban, roles: ["admin", "pro", "agency"] },
   { href: "/government", label: "Government", icon: Landmark, roles: ["admin", "pro"] },
   { href: "/payments", label: "Payments", icon: CreditCard, roles: ["admin", "pro"] },
   { href: "/agencies", label: "Agencies", icon: Building2, roles: ["admin"] },
-  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "pro"] },
+  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
   { href: "/notifications", label: "Notifications", icon: Bell, roles: ["admin", "pro", "agency"] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["admin", "pro", "agency"] },
 ];

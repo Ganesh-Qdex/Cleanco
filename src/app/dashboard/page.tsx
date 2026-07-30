@@ -50,7 +50,54 @@ export default function DashboardPage() {
     return candidates;
   }, [candidates, user]);
 
+  const isPro = user?.role === "pro";
+
   const kpis = useMemo(() => {
+    if (isPro) {
+      return [
+        {
+          label: "Stage 1 — Signed Offer",
+          value: scoped.filter((c) => c.currentStage === "signed_offer_docs").length,
+          icon: Briefcase,
+          tone: "text-amber-600",
+        },
+        {
+          label: "Stage 2 — Nawakis",
+          value: scoped.filter((c) => c.currentStage === "stage2_signed_nawakis").length,
+          icon: Clock,
+          tone: "text-red-500",
+        },
+        {
+          label: "PRO Queue Total",
+          value: scoped.filter((c) =>
+            ["signed_offer_docs", "stage2_signed_nawakis"].includes(c.currentStage)
+          ).length,
+          icon: Users,
+          tone: "text-primary",
+        },
+        {
+          label: "MOHRE Pending",
+          value: scoped.filter((c) =>
+            ["mohre_approved", "upload_preapproved_mol"].includes(c.currentStage)
+          ).length,
+          icon: FileWarning,
+          tone: "text-violet-600",
+        },
+        {
+          label: "ICP / Visa",
+          value: scoped.filter((c) => c.currentStage === "upload_visa").length,
+          icon: Plane,
+          tone: "text-teal-600",
+        },
+        {
+          label: "Rejected",
+          value: scoped.filter((c) => c.currentStage === "rejected").length,
+          icon: XCircle,
+          tone: "text-red-500",
+        },
+      ];
+    }
+
     const openVacancies = vacancies.filter((v) => v.status === "open").length;
     const filledVacancies = vacancies.filter((v) => v.status === "filled").length;
     return [
@@ -104,7 +151,7 @@ export default function DashboardPage() {
         tone: "text-primary",
       },
     ];
-  }, [scoped, vacancies]);
+  }, [scoped, vacancies, isPro]);
 
   const monthlyVisa = useMemo(() => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
@@ -150,10 +197,12 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
-          Dashboard
+          {isPro ? "PRO Dashboard" : "Dashboard"}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Recruitment pipeline overview for Cleanco manpower operations.
+          {isPro
+            ? "Your Stage 1 & Stage 2 MOL / Nawakis workload."
+            : "Recruitment pipeline overview for Cleanco manpower operations."}
         </p>
       </div>
 

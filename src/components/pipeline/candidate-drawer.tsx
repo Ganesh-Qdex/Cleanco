@@ -50,6 +50,7 @@ export function CandidateDrawer() {
   const agencies = useAppStore((s) => s.agencies);
   const vacancies = useAppStore((s) => s.vacancies);
   const advanceCandidate = useAppStore((s) => s.advanceCandidate);
+  const moveCandidate = useAppStore((s) => s.moveCandidate);
   const rejectCandidate = useAppStore((s) => s.rejectCandidate);
   const user = useAuthStore((s) => s.user);
 
@@ -145,11 +146,9 @@ export function CandidateDrawer() {
         ? " Police verification / good conduct certificate required for this nationality."
         : "";
 
-    advanceCandidate(candidate.id, {
-      remarks:
-        remarks ||
-        `${action.label}.${policeNote}`,
-      decision: stage.decision ? "approved" : undefined,
+    const meta = {
+      remarks: remarks || `${action.label}.${policeNote}`,
+      decision: stage.decision ? ("approved" as const) : undefined,
       actor: user.name,
       offerIssueDate:
         action.id === "send_offer" ? new Date().toISOString() : undefined,
@@ -163,7 +162,17 @@ export function CandidateDrawer() {
           ? `${candidate.name.replace(/\s/g, "_")}_${candidate.passportNumber}_visa.pdf`
           : undefined,
       documents: docs,
-    });
+    };
+
+    // PRO Stage 1 → Create MOL moves directly to Stage 2 on their board
+    if (user.role === "pro" && action.id === "create_mol") {
+      moveCandidate(candidate.id, "stage2_signed_nawakis", meta);
+      toast.success("MOL created — moved to Stage 2 (Nawakis)");
+      resetForm();
+      return;
+    }
+
+    advanceCandidate(candidate.id, meta);
 
     toast.success(
       next

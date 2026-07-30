@@ -64,8 +64,8 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
   },
   {
     id: "signed_offer_docs",
-    label: "Stage 1 - Signed offer letters with docs (Pro)",
-    shortLabel: "Stage 1 Offer",
+    label: "Stage 1 - Signed offer with docs (PRO)",
+    shortLabel: "Stage 1",
     order: 2,
     responsibility: "PRO Team",
     purpose: "Signed offer + passport, photo, police clearance received. Create and download MOL.",
@@ -85,7 +85,7 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     responsibility: "PRO / Admin",
     purpose: "Upload pre-approved MOL and send to agency, or reject.",
     documents: ["MOL Offer"],
-    roles: ["pro", "admin"],
+    roles: ["admin"],
     decision: true,
     rejectionReasons: ["Company block", "Document issue", "MOL error"],
     color: "#F97316",
@@ -100,8 +100,8 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
   },
   {
     id: "stage2_signed_nawakis",
-    label: "Stage 2 - signed offer/Nawakis (PRO)",
-    shortLabel: "Nawakis",
+    label: "Stage 2 - Signed offers / Nawakis (PRO)",
+    shortLabel: "Stage 2",
     order: 4,
     responsibility: "PRO Team",
     purpose: "Modification of MOL offer (Nawakis) — modify and download.",
@@ -192,6 +192,21 @@ export const PIPELINE_COLUMNS = WORKFLOW_STAGES.filter(
   (s) => s.id !== "completed" && s.id !== "rejected"
 );
 
+/** PRO pipeline: Stage 1 signed offer + Stage 2 Nawakis only. */
+export const PRO_PIPELINE_STAGES: WorkflowStage[] = [
+  "signed_offer_docs",
+  "stage2_signed_nawakis",
+];
+
+export const PRO_PIPELINE_COLUMNS = PIPELINE_COLUMNS.filter((s) =>
+  PRO_PIPELINE_STAGES.includes(s.id)
+);
+
+export function getPipelineColumnsForRole(role: UserRole) {
+  if (role === "pro") return PRO_PIPELINE_COLUMNS;
+  return PIPELINE_COLUMNS;
+}
+
 const STAGE_ORDER = WORKFLOW_STAGES.filter((s) => s.id !== "rejected").map((s) => s.id);
 
 export function getStageDefinition(stage: WorkflowStage): StageDefinition {
@@ -212,17 +227,16 @@ export function getNextStage(current: WorkflowStage): WorkflowStage | null {
 export function canTransition(
   stage: WorkflowStage,
   role: UserRole,
-  action: "advance" | "reject" | "approve" = "advance"
+  _action: "advance" | "reject" | "approve" = "advance"
 ): boolean {
   const def = getStageDefinition(stage);
   if (!def) return false;
   if (role === "admin") return true;
   if (role === "agency") {
-    // Agency can view but only upload docs related stages via candidate module
-    return stage === "cv_received" && action !== "reject";
+    return stage === "cv_received" && _action !== "reject";
   }
   if (role === "pro") {
-    return def.roles.includes("pro");
+    return PRO_PIPELINE_STAGES.includes(stage);
   }
   return false;
 }

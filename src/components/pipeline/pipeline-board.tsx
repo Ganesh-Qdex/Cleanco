@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
-import { PIPELINE_COLUMNS, canTransition, getStageDefinition } from "@/lib/workflow";
+import { PIPELINE_COLUMNS, canTransition, getStageDefinition, getPipelineColumnsForRole, PRO_PIPELINE_STAGES } from "@/lib/workflow";
 import { daysBetween, initials } from "@/lib/utils";
 import type { Candidate, WorkflowStage } from "@/types";
 import { toast } from "sonner";
@@ -85,17 +85,25 @@ export function PipelineBoard() {
     return true;
   };
 
+  const columns = useMemo(
+    () => getPipelineColumnsForRole(user?.role || "admin"),
+    [user?.role]
+  );
+  const isPro = user?.role === "pro";
+
   const filtered = useMemo(() => {
     return candidates.filter((c) => {
       if (!matchesFilters(c)) return false;
       if (c.currentStage === "completed" || c.currentStage === "rejected") return false;
+      if (isPro && !PRO_PIPELINE_STAGES.includes(c.currentStage)) return false;
       if (filters.stage && c.currentStage !== filters.stage) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candidates, filters, globalSearch, agencies, user]);
+  }, [candidates, filters, globalSearch, agencies, user, isPro]);
 
   const rejectedCandidates = useMemo(() => {
+    if (isPro) return [];
     return candidates.filter((c) => {
       if (c.currentStage !== "rejected") return false;
       if (!matchesFilters(c)) return false;
@@ -103,18 +111,18 @@ export function PipelineBoard() {
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candidates, filters, globalSearch, agencies, user]);
+  }, [candidates, filters, globalSearch, agencies, user, isPro]);
 
   const byStage = useMemo(() => {
     const map: Record<string, Candidate[]> = {};
-    PIPELINE_COLUMNS.forEach((s) => {
+    columns.forEach((s) => {
       map[s.id] = [];
     });
     filtered.forEach((c) => {
       if (map[c.currentStage]) map[c.currentStage].push(c);
     });
     return map;
-  }, [filtered]);
+  }, [filtered, columns]);
 
   const activeCandidate = candidates.find((c) => c.id === activeId);
 
@@ -134,7 +142,21 @@ export function PipelineBoard() {
       return;
     }
 
+    if (user.role === "pro") {
+      if (
+        !PRO_PIPELINE_STAGES.includes(candidate.currentStage) ||
+        !PRO_PIPELINE_STAGES.includes(toStage)
+      ) {
+        toast.error("PRO can only move candidates between Stage 1 and Stage 2");
+        return;
+      }
+    }
+
     if (toStage === "rejected") {
+      if (isPro) {
+        toast.error("PRO cannot reject from this board");
+        return;
+      }
       rejectCandidate(candidateId, "Rejected via pipeline board", user.name);
       toast.error("Candidate moved to Rejected");
       return;
@@ -162,7 +184,7 @@ export function PipelineBoard() {
   };
 
   const showActiveColumns = !filters.stage || filters.stage !== "rejected";
-  const showRejectedColumn = !filters.stage || filters.stage === "rejected";
+  const showRejectedColumn = !isPro && (!filters.stage || filters.stage === "rejected");
 
   return (
     <DndContext
@@ -173,7 +195,7 @@ export function PipelineBoard() {
     >
       <div className="flex gap-4 overflow-x-auto pb-4">
         {showActiveColumns &&
-          PIPELINE_COLUMNS.map((col) => (
+          columns.map((col) => (
             <PipelineColumn
               key={col.id}
               id={col.id}
@@ -183,6 +205,7 @@ export function PipelineBoard() {
               candidates={byStage[col.id] || []}
               agencies={agencies}
               onOpen={setSelected}
+              wide={isPro}
             />
           ))}
         {showRejectedColumn && (
@@ -221,6 +244,7 @@ function PipelineColumn({
   agencies,
   onOpen,
   showRejectionInfo,
+  wide,
 }: {
   id: string;
   title: string;
@@ -230,6 +254,7 @@ function PipelineColumn({
   agencies: { id: string; name: string }[];
   onOpen: (id: string) => void;
   showRejectionInfo?: boolean;
+  wide?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -237,7 +262,8 @@ function PipelineColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex w-[300px] shrink-0 flex-col rounded-[20px] border border-border/50 bg-muted/30 shadow-inner-soft",
+        "flex shrink-0 flex-col rounded-[20px] border border-border/50 bg-muted/30 shadow-inner-soft",
+        wide ? "w-[420px]" : "w-[300px]",
         showRejectionInfo && "border-red-500/30 bg-red-500/5",
         isOver && "ring-2 ring-primary/40"
       )}
