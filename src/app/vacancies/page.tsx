@@ -51,7 +51,9 @@ export default function VacanciesPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [candidateSearch, setCandidateSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<VacancyStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<VacancyStatus | "all">(
+    user?.role === "agency" ? "open" : "all"
+  );
   const [selectedVacancyId, setSelectedVacancyId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
@@ -156,6 +158,84 @@ export default function VacanciesPage() {
     setStatusFilter((prev) => (prev === status ? "all" : status));
   };
 
+  const canUpload = user?.role === "agency" || user?.role === "admin";
+  const isAgency = user?.role === "agency";
+
+  const canUploadToVacancy = (v: Vacancy) => {
+    if (!canUpload) return false;
+    if (v.status !== "open" || v.quantityRequired - v.filledCount <= 0) return false;
+    if (isAgency && user?.agencyId) return v.agencyIds.includes(user.agencyId);
+    return true;
+  };
+
+  const openUpload = (vacancyId?: string) => {
+    const preferred =
+      (vacancyId && vacancies.find((v) => v.id === vacancyId)) ||
+      (selectedVacancyId && vacancies.find((v) => v.id === selectedVacancyId)) ||
+      null;
+
+    const vac =
+      (preferred && canUploadToVacancy(preferred) ? preferred : null) ||
+      scopedVacancies.find((v) => canUploadToVacancy(v));
+
+    if (!vac) {
+      toast.error("No unfilled vacancies available to upload candidates");
+      return;
+    }
+
+    setCandForm({
+      name: "",
+      passportNumber: "",
+      nationality: "India",
+      jobRole: vac.jobRole || "Cleaner",
+      vacancyId: vac.id,
+      agencyId: user?.agencyId || vac.agencyIds[0] || "agency-1",
+      remarks: "",
+    });
+    setUploadOpen(true);
+  };
+
+  const submitCandidate = () => {
+    if (!candForm.name || !candForm.passportNumber || !candForm.vacancyId) {
+      toast.error("Name, passport, and vacancy are required");
+      return;
+    }
+    const vacancy = vacancies.find((v) => v.id === candForm.vacancyId);
+    if (!vacancy || !canUploadToVacancy(vacancy)) {
+      toast.error("You can only upload to unfilled open vacancies assigned to you");
+      return;
+    }
+    const now = new Date().toISOString();
+    addCandidate({
+      name: candForm.name,
+      passportNumber: candForm.passportNumber,
+      nationality: candForm.nationality,
+      jobRole: candForm.jobRole || vacancy.jobRole || "Cleaner",
+      vacancyId: candForm.vacancyId,
+      agencyId: isAgency && user?.agencyId ? user.agencyId : candForm.agencyId,
+      photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(candForm.name)}`,
+      currentStage: "cv_received",
+      priority: vacancy.priority || "medium",
+      documents: [
+        {
+          id: `doc-cv-${Date.now()}`,
+          type: "cv",
+          name: `CV_${candForm.name.replace(/\s/g, "_")}.pdf`,
+          url: "#cv",
+          uploadedAt: now,
+          uploadedBy: user?.name || "Agency",
+        },
+      ],
+      remarks: candForm.remarks,
+    });
+    toast.success("Candidate uploaded to vacancy");
+    setUploadOpen(false);
+    setSelectedVacancyId(candForm.vacancyId);
+    setStatusFilter("open");
+  };
+
+  const unfilledVacancies = scopedVacancies.filter((v) => canUploadToVacancy(v));
+
   const columns = [
     columnHelper.accessor("companyName", { header: "Company" }),
     columnHelper.accessor("jobRole", { header: "Role" }),
@@ -210,6 +290,37 @@ export default function VacanciesPage() {
       header: "Closing",
       cell: (info) => formatDate(info.getValue()),
     }),
+    ...(canUpload
+      ? [
+          columnHelper.display({
+            id: "actions",
+            header: "Upload",
+            cell: ({ row }) => {
+              const v = row.original;
+              const allowed = canUploadToVacancy(v);
+              return (
+                <Button
+                  size="sm"
+                  variant={allowed ? "default" : "outline"}
+                  disabled={!allowed}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openUpload(v.id);
+                  }}
+                  title={
+                    allowed
+                      ? "Upload candidate to this vacancy"
+                      : "Only unfilled open vacancies allow uploads"
+                  }
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {allowed ? "Upload" : "Full"}
+                </Button>
+              );
+            },
+          }),
+        ]
+      : []),
   ];
 
   const table = useReactTable({
@@ -231,61 +342,6 @@ export default function VacanciesPage() {
     setOpen(false);
   };
 
-  const canUpload = user?.role === "agency" || user?.role === "admin";
-
-  const openUpload = (vacancyId?: string) => {
-    const vac =
-      vacancies.find((v) => v.id === (vacancyId || selectedVacancyId)) ||
-      rows.find((v) => v.status === "open");
-    setCandForm({
-      name: "",
-      passportNumber: "",
-      nationality: "India",
-      jobRole: vac?.jobRole || "Cleaner",
-      vacancyId: vac?.id || "",
-      agencyId: user?.agencyId || vac?.agencyIds[0] || "agency-1",
-      remarks: "",
-    });
-    setUploadOpen(true);
-  };
-
-  const submitCandidate = () => {
-    if (!candForm.name || !candForm.passportNumber || !candForm.vacancyId) {
-      toast.error("Name, passport, and vacancy are required");
-      return;
-    }
-    const vacancy = vacancies.find((v) => v.id === candForm.vacancyId);
-    const now = new Date().toISOString();
-    addCandidate({
-      name: candForm.name,
-      passportNumber: candForm.passportNumber,
-      nationality: candForm.nationality,
-      jobRole: candForm.jobRole || vacancy?.jobRole || "Cleaner",
-      vacancyId: candForm.vacancyId,
-      agencyId: candForm.agencyId,
-      photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(candForm.name)}`,
-      currentStage: "cv_received",
-      priority: vacancy?.priority || "medium",
-      documents: [
-        {
-          id: `doc-cv-${Date.now()}`,
-          type: "cv",
-          name: `CV_${candForm.name.replace(/\s/g, "_")}.pdf`,
-          url: "#cv",
-          uploadedAt: now,
-          uploadedBy: user?.name || "Agency",
-        },
-      ],
-      remarks: candForm.remarks,
-    });
-    toast.success("Candidate uploaded");
-    setUploadOpen(false);
-    setSelectedVacancyId(candForm.vacancyId);
-    setStatusFilter("all");
-  };
-
-  const assignedOpenVacancies = scopedVacancies.filter((v) => v.status === "open");
-
   const candidateFilterLabel = selectedVacancy
     ? `${selectedVacancy.companyName} — ${selectedVacancy.jobRole}`
     : statusFilter !== "all"
@@ -300,7 +356,9 @@ export default function VacanciesPage() {
             Vacancies
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Click Open / Filled / Closed to filter vacancies and candidates on this page.
+            {isAgency
+              ? "Upload candidates on unfilled open vacancies assigned to your agency."
+              : "Click Open / Filled / Closed to filter. Agencies can upload on unfilled vacancies."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -455,7 +513,7 @@ export default function VacanciesPage() {
               value={candidateSearch}
               onChange={(e) => setCandidateSearch(e.target.value)}
             />
-            {canUpload && selectedVacancyId && (
+            {canUpload && selectedVacancyId && selectedVacancy && canUploadToVacancy(selectedVacancy) && (
               <Button size="sm" onClick={() => openUpload(selectedVacancyId)}>
                 <Upload className="h-4 w-4" />
                 Upload
@@ -646,7 +704,7 @@ export default function VacanciesPage() {
           <DialogHeader>
             <DialogTitle>Upload Candidate</DialogTitle>
             <DialogDescription>
-              Candidate starts at CV received from agency.
+              Upload to an unfilled open vacancy. Candidate starts at CV received.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -689,7 +747,7 @@ export default function VacanciesPage() {
               </div>
             </div>
             <div>
-              <Label>Assigned Vacancy</Label>
+              <Label>Assigned Vacancy (unfilled only)</Label>
               <Select
                 value={candForm.vacancyId}
                 onValueChange={(v) => {
@@ -702,12 +760,17 @@ export default function VacanciesPage() {
                 }}
               >
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Select vacancy" />
+                  <SelectValue placeholder="Select unfilled vacancy" />
                 </SelectTrigger>
                 <SelectContent>
-                  {assignedOpenVacancies.map((v) => (
+                  {unfilledVacancies.length === 0 && (
+                    <SelectItem value="none" disabled>
+                      No unfilled vacancies
+                    </SelectItem>
+                  )}
+                  {unfilledVacancies.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
-                      {v.companyName} — {v.jobRole}
+                      {v.companyName} — {v.jobRole} ({v.quantityRequired - v.filledCount} left)
                     </SelectItem>
                   ))}
                 </SelectContent>

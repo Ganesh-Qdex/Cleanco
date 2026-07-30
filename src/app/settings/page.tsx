@@ -99,6 +99,7 @@ export default function SettingsPage() {
               onClick={() => {
                 localStorage.removeItem("cleanco-app-data");
                 localStorage.removeItem("cleanco-app-data-v2");
+                localStorage.removeItem("cleanco-app-data-v3");
                 toast.success("Cleared app data — reload to regenerate");
                 setTimeout(() => window.location.reload(), 600);
               }}

@@ -50,7 +50,6 @@ export function CandidateDrawer() {
   const agencies = useAppStore((s) => s.agencies);
   const vacancies = useAppStore((s) => s.vacancies);
   const advanceCandidate = useAppStore((s) => s.advanceCandidate);
-  const moveCandidate = useAppStore((s) => s.moveCandidate);
   const rejectCandidate = useAppStore((s) => s.rejectCandidate);
   const user = useAuthStore((s) => s.user);
 
@@ -105,6 +104,7 @@ export function CandidateDrawer() {
     }
 
     // advance
+    const now = new Date().toISOString();
     const docs: DocumentFile[] | undefined =
       action.id === "upload_visa"
         ? [
@@ -113,7 +113,7 @@ export function CandidateDrawer() {
               type: "visa_pdf",
               name: `visa_${candidate.passportNumber}.pdf`,
               url: "#visa",
-              uploadedAt: new Date().toISOString(),
+              uploadedAt: now,
               uploadedBy: user.name,
             },
           ]
@@ -124,7 +124,7 @@ export function CandidateDrawer() {
                 type: "flight_ticket",
                 name: `ticket_${candidate.passportNumber}.pdf`,
                 url: "#ticket",
-                uploadedAt: new Date().toISOString(),
+                uploadedAt: now,
                 uploadedBy: user.name,
               },
             ]
@@ -135,11 +135,57 @@ export function CandidateDrawer() {
                   type: "mol_offer",
                   name: `mol_${candidate.passportNumber}.pdf`,
                   url: "#mol",
-                  uploadedAt: new Date().toISOString(),
+                  uploadedAt: now,
                   uploadedBy: user.name,
                 },
               ]
-            : undefined;
+            : action.id === "upload_signed_docs"
+              ? [
+                  {
+                    id: `doc-signed-offer-${Date.now()}`,
+                    type: "signed_offer",
+                    name: `signed_offer_${candidate.passportNumber}.pdf`,
+                    url: "#signed_offer",
+                    uploadedAt: now,
+                    uploadedBy: user.name,
+                  },
+                  {
+                    id: `doc-passport-${Date.now()}`,
+                    type: "passport",
+                    name: `passport_${candidate.passportNumber}.pdf`,
+                    url: "#passport",
+                    uploadedAt: now,
+                    uploadedBy: user.name,
+                  },
+                  {
+                    id: `doc-photo-${Date.now()}`,
+                    type: "photo",
+                    name: `photo_${candidate.passportNumber}.jpg`,
+                    url: "#photo",
+                    uploadedAt: now,
+                    uploadedBy: user.name,
+                  },
+                  {
+                    id: `doc-police-${Date.now()}`,
+                    type: "police_clearance",
+                    name: `police_clearance_${candidate.passportNumber}.pdf`,
+                    url: "#police",
+                    uploadedAt: now,
+                    uploadedBy: user.name,
+                  },
+                ]
+              : action.id === "upload_signed_mol"
+                ? [
+                    {
+                      id: `doc-signed-mol-${Date.now()}`,
+                      type: "signed_mol",
+                      name: `signed_mol_${candidate.passportNumber}.pdf`,
+                      url: "#signed_mol",
+                      uploadedAt: now,
+                      uploadedBy: user.name,
+                    },
+                  ]
+                : undefined;
 
     const policeNote =
       action.id === "send_offer" && needsPolice
@@ -163,14 +209,6 @@ export function CandidateDrawer() {
           : undefined,
       documents: docs,
     };
-
-    // PRO Stage 1 → Create MOL moves directly to Stage 2 on their board
-    if (user.role === "pro" && action.id === "create_mol") {
-      moveCandidate(candidate.id, "stage2_signed_nawakis", meta);
-      toast.success("MOL created — moved to Stage 2 (Nawakis)");
-      resetForm();
-      return;
-    }
 
     advanceCandidate(candidate.id, meta);
 

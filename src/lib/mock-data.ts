@@ -244,13 +244,15 @@ export function generateCandidates(agencies: Agency[], vacancies: Vacancy[]): Ca
       ] as WorkflowStage[]);
     } else {
       const weight = rand();
-      if (weight < 0.1) currentStage = "completed";
-      else if (weight < 0.22) currentStage = "flight_bookings";
-      else if (weight < 0.36) currentStage = "upload_visa";
-      else if (weight < 0.5) currentStage = "mohre_approved";
-      else if (weight < 0.62) currentStage = "stage2_signed_nawakis";
-      else if (weight < 0.74) currentStage = "upload_preapproved_mol";
-      else if (weight < 0.86) currentStage = "signed_offer_docs";
+      if (weight < 0.08) currentStage = "completed";
+      else if (weight < 0.16) currentStage = "flight_bookings";
+      else if (weight < 0.26) currentStage = "upload_visa";
+      else if (weight < 0.36) currentStage = "mohre_approved";
+      else if (weight < 0.46) currentStage = "stage2_signed_nawakis";
+      else if (weight < 0.56) currentStage = "preapproved_mol_agency";
+      else if (weight < 0.64) currentStage = "upload_preapproved_mol";
+      else if (weight < 0.74) currentStage = "signed_offer_docs";
+      else if (weight < 0.86) currentStage = "offer_from_rm";
       else currentStage = "cv_received";
     }
 

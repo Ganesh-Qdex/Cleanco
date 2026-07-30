@@ -6,7 +6,6 @@ export interface StageAction {
   id: string;
   label: string;
   type: StageActionType;
-  /** Shown under the primary advance button (e.g. police verification note) */
   note?: string;
 }
 
@@ -26,7 +25,6 @@ export interface StageDefinition {
   actions: StageAction[];
 }
 
-/** Nationalities that typically need police clearance / good conduct. */
 export const POLICE_VERIFICATION_COUNTRIES = [
   "India",
   "Pakistan",
@@ -63,10 +61,34 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     ],
   },
   {
+    id: "offer_from_rm",
+    label: "Offer letter from RM",
+    shortLabel: "Offer from RM",
+    order: 2,
+    responsibility: "Agency",
+    purpose: "Download offer letter from RM and upload signed offer with required documents.",
+    documents: [
+      "Signed Offer Letter",
+      "Passport",
+      "Candidate Photo",
+      "Police Clearance",
+    ],
+    roles: ["agency", "admin"],
+    color: "#60A5FA",
+    actions: [
+      { id: "download_offer", label: "Download offer letter", type: "download" },
+      {
+        id: "upload_signed_docs",
+        label: "Upload docs along with signed offer letter",
+        type: "advance",
+      },
+    ],
+  },
+  {
     id: "signed_offer_docs",
     label: "Stage 1 - Signed offer with docs (PRO)",
     shortLabel: "Stage 1",
-    order: 2,
+    order: 3,
     responsibility: "PRO Team",
     purpose: "Signed offer + passport, photo, police clearance received. Create and download MOL.",
     documents: ["Signed Offer", "Passport", "Photo", "Police Clearance"],
@@ -81,8 +103,8 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     id: "upload_preapproved_mol",
     label: "Upload pre approved MOL Letter",
     shortLabel: "Pre-approved MOL",
-    order: 3,
-    responsibility: "PRO / Admin",
+    order: 4,
+    responsibility: "Admin",
     purpose: "Upload pre-approved MOL and send to agency, or reject.",
     documents: ["MOL Offer"],
     roles: ["admin"],
@@ -99,10 +121,25 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     ],
   },
   {
+    id: "preapproved_mol_agency",
+    label: "Pre approved MOL offer letters",
+    shortLabel: "MOL for Agency",
+    order: 5,
+    responsibility: "Agency",
+    purpose: "Download pre-approved MOL and upload signed MOL.",
+    documents: ["Signed MOL"],
+    roles: ["agency", "admin"],
+    color: "#FB923C",
+    actions: [
+      { id: "download_preapproved_mol", label: "Download", type: "download" },
+      { id: "upload_signed_mol", label: "Upload signed MOL", type: "advance" },
+    ],
+  },
+  {
     id: "stage2_signed_nawakis",
     label: "Stage 2 - Signed offers / Nawakis (PRO)",
     shortLabel: "Stage 2",
-    order: 4,
+    order: 6,
     responsibility: "PRO Team",
     purpose: "Modification of MOL offer (Nawakis) — modify and download.",
     roles: ["pro", "admin"],
@@ -116,11 +153,11 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     id: "mohre_approved",
     label: "Mohre approved candidates",
     shortLabel: "MOHRE Approved",
-    order: 5,
+    order: 7,
     responsibility: "PRO / Government",
     purpose: "MOHRE approved. Download offer letter and proceed to ICP portal, or reject.",
     fee: 1800,
-    roles: ["pro", "admin"],
+    roles: ["admin"],
     decision: true,
     rejectionReasons: ["Company block", "Police case", "Document issue"],
     color: "#BE185D",
@@ -137,12 +174,12 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     id: "upload_visa",
     label: "Upload approved visa",
     shortLabel: "Upload Visa",
-    order: 6,
+    order: 8,
     responsibility: "PRO / Admin",
     purpose: "Upload approved visa PDF or reject.",
     documents: ["Visa PDF"],
     fee: 800,
-    roles: ["pro", "admin"],
+    roles: ["admin"],
     decision: true,
     rejectionReasons: ["Police case", "Document issue (personal)", "ICP rejection"],
     color: "#10B981",
@@ -155,11 +192,11 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     id: "flight_bookings",
     label: "Flight bookings",
     shortLabel: "Flights",
-    order: 7,
+    order: 9,
     responsibility: "Admin / HR",
     purpose: "Upload flight tickets for candidate travel.",
     documents: ["Flight Tickets"],
-    roles: ["admin", "pro"],
+    roles: ["admin"],
     color: "#059669",
     actions: [{ id: "upload_tickets", label: "Upload tickets", type: "advance" }],
   },
@@ -167,7 +204,7 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     id: "completed",
     label: "Completed",
     shortLabel: "Done",
-    order: 8,
+    order: 10,
     responsibility: "System",
     purpose: "Candidate pipeline completed.",
     roles: ["admin", "pro", "agency"],
@@ -187,23 +224,31 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
   },
 ];
 
-/** Only the 7 operational pipeline columns. */
 export const PIPELINE_COLUMNS = WORKFLOW_STAGES.filter(
   (s) => s.id !== "completed" && s.id !== "rejected"
 );
 
-/** PRO pipeline: Stage 1 signed offer + Stage 2 Nawakis only. */
 export const PRO_PIPELINE_STAGES: WorkflowStage[] = [
   "signed_offer_docs",
   "stage2_signed_nawakis",
+];
+
+export const AGENCY_PIPELINE_STAGES: WorkflowStage[] = [
+  "offer_from_rm",
+  "preapproved_mol_agency",
 ];
 
 export const PRO_PIPELINE_COLUMNS = PIPELINE_COLUMNS.filter((s) =>
   PRO_PIPELINE_STAGES.includes(s.id)
 );
 
+export const AGENCY_PIPELINE_COLUMNS = PIPELINE_COLUMNS.filter((s) =>
+  AGENCY_PIPELINE_STAGES.includes(s.id)
+);
+
 export function getPipelineColumnsForRole(role: UserRole) {
   if (role === "pro") return PRO_PIPELINE_COLUMNS;
+  if (role === "agency") return AGENCY_PIPELINE_COLUMNS;
   return PIPELINE_COLUMNS;
 }
 
@@ -229,11 +274,9 @@ export function canTransition(
   role: UserRole,
   _action: "advance" | "reject" | "approve" = "advance"
 ): boolean {
-  const def = getStageDefinition(stage);
-  if (!def) return false;
   if (role === "admin") return true;
   if (role === "agency") {
-    return stage === "cv_received" && _action !== "reject";
+    return AGENCY_PIPELINE_STAGES.includes(stage);
   }
   if (role === "pro") {
     return PRO_PIPELINE_STAGES.includes(stage);

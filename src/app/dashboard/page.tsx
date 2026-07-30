@@ -51,8 +51,44 @@ export default function DashboardPage() {
   }, [candidates, user]);
 
   const isPro = user?.role === "pro";
+  const isAgency = user?.role === "agency";
 
   const kpis = useMemo(() => {
+    if (isAgency) {
+      return [
+        {
+          label: "Offer letter from RM",
+          value: scoped.filter((c) => c.currentStage === "offer_from_rm").length,
+          icon: Briefcase,
+          tone: "text-blue-600",
+        },
+        {
+          label: "Pre-approved MOL",
+          value: scoped.filter((c) => c.currentStage === "preapproved_mol_agency").length,
+          icon: Clock,
+          tone: "text-orange-600",
+        },
+        {
+          label: "Agency Queue",
+          value: scoped.filter((c) =>
+            ["offer_from_rm", "preapproved_mol_agency"].includes(c.currentStage)
+          ).length,
+          icon: Users,
+          tone: "text-primary",
+        },
+        {
+          label: "Open Vacancies",
+          value: vacancies.filter(
+            (v) =>
+              v.status === "open" &&
+              (!user?.agencyId || v.agencyIds.includes(user.agencyId))
+          ).length,
+          icon: Building2,
+          tone: "text-sky-600",
+        },
+      ];
+    }
+
     if (isPro) {
       return [
         {
@@ -121,7 +157,7 @@ export default function DashboardPage() {
       {
         label: "MOHRE Pending",
         value: scoped.filter((c) =>
-          ["upload_preapproved_mol", "stage2_signed_nawakis", "mohre_approved"].includes(
+          ["upload_preapproved_mol", "preapproved_mol_agency", "stage2_signed_nawakis", "mohre_approved"].includes(
             c.currentStage
           )
         ).length,
@@ -137,7 +173,7 @@ export default function DashboardPage() {
       {
         label: "Agency Pending",
         value: scoped.filter((c) =>
-          ["cv_received", "signed_offer_docs"].includes(c.currentStage)
+          ["cv_received", "offer_from_rm", "preapproved_mol_agency"].includes(c.currentStage)
         ).length,
         icon: Building2,
         tone: "text-sky-600",
@@ -151,7 +187,7 @@ export default function DashboardPage() {
         tone: "text-primary",
       },
     ];
-  }, [scoped, vacancies, isPro]);
+  }, [scoped, vacancies, isPro, isAgency, user?.agencyId]);
 
   const monthlyVisa = useMemo(() => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
@@ -197,12 +233,14 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
-          {isPro ? "PRO Dashboard" : "Dashboard"}
+          {isAgency ? "Agency Dashboard" : isPro ? "PRO Dashboard" : "Dashboard"}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          {isPro
-            ? "Your Stage 1 & Stage 2 MOL / Nawakis workload."
-            : "Recruitment pipeline overview for Cleanco manpower operations."}
+          {isAgency
+            ? "Offer letters from RM and pre-approved MOL tasks for your agency."
+            : isPro
+              ? "Your Stage 1 & Stage 2 MOL / Nawakis workload."
+              : "Recruitment pipeline overview for Cleanco manpower operations."}
         </p>
       </div>
 

@@ -7,8 +7,10 @@ export type PaymentStatus = "pending" | "paid" | "delayed";
 
 export type WorkflowStage =
   | "cv_received"
+  | "offer_from_rm"
   | "signed_offer_docs"
   | "upload_preapproved_mol"
+  | "preapproved_mol_agency"
   | "stage2_signed_nawakis"
   | "mohre_approved"
   | "upload_visa"

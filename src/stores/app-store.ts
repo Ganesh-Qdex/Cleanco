@@ -341,7 +341,7 @@ export const useAppStore = create<AppState>()(
         })),
     }),
     {
-      name: "cleanco-app-data-v2",
+      name: "cleanco-app-data-v3",
       skipHydration: true,
       partialize: (s) => ({
         agencies: s.agencies,
