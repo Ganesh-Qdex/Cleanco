@@ -1,0 +1,207 @@
+"use client";
+
+import { useMemo } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAppStore } from "@/stores/app-store";
+import { daysBetween } from "@/lib/utils";
+
+const COLORS = ["#2563eb", "#60a5fa", "#34d399", "#f59e0b", "#ef4444", "#8b5cf6"];
+
+export default function ReportsPage() {
+  const candidates = useAppStore((s) => s.candidates);
+  const agencies = useAppStore((s) => s.agencies);
+  const vacancies = useAppStore((s) => s.vacancies);
+
+  const stats = useMemo(() => {
+    const completed = candidates.filter((c) =>
+      ["completed", "visa_shared_agency", "visa_issued", "hr_processing"].includes(c.currentStage)
+    ).length;
+    const successRate = candidates.length
+      ? Math.round((completed / candidates.length) * 100)
+      : 0;
+    const avgDays =
+      candidates.length === 0
+        ? 0
+        : Math.round(
+            candidates.reduce((a, c) => a + daysBetween(c.createdAt, c.updatedAt), 0) /
+              candidates.length
+          );
+    const paymentPending = candidates.filter(
+      (c) =>
+        c.mohrePayment?.status === "pending" ||
+        c.mohrePayment?.status === "delayed" ||
+        c.icpPayment?.status === "pending"
+    ).length;
+    const govPending = candidates.filter((c) =>
+      [
+        "mohre_submitted",
+        "police_verification",
+        "mohre_approval",
+        "visa_application_icp",
+        "icp_payment",
+        "icp_decision",
+      ].includes(c.currentStage)
+    ).length;
+
+    const rejectionReasons: Record<string, number> = {};
+    candidates.forEach((c) => {
+      const reason = c.mohreRejectionReason || c.icpRejectionReason;
+      if (reason) rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1;
+    });
+
+    const country = Object.entries(
+      candidates.reduce<Record<string, number>>((acc, c) => {
+        acc[c.nationality] = (acc[c.nationality] || 0) + 1;
+        return acc;
+      }, {})
+    ).map(([name, value]) => ({ name, value }));
+
+    const agencyPerf = agencies.map((a) => {
+      const total = candidates.filter((c) => c.agencyId === a.id).length;
+      const done = candidates.filter(
+        (c) =>
+          c.agencyId === a.id &&
+          ["completed", "visa_shared_agency", "visa_issued"].includes(c.currentStage)
+      ).length;
+      return {
+        name: a.name.split(" ").slice(0, 2).join(" "),
+        rate: total ? Math.round((done / total) * 100) : 0,
+        total,
+      };
+    });
+
+    const fulfillment = vacancies.map((v) => ({
+      name: v.jobRole,
+      filled: v.filledCount,
+      required: v.quantityRequired,
+      pct: Math.round((v.filledCount / v.quantityRequired) * 100),
+    }));
+
+    return {
+      successRate,
+      avgDays,
+      paymentPending,
+      govPending,
+      rejectionData: Object.entries(rejectionReasons).map(([name, value]) => ({ name, value })),
+      country,
+      agencyPerf,
+      fulfillment: fulfillment.slice(0, 8),
+    };
+  }, [candidates, agencies, vacancies]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
+          Reports
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          Visa success, processing time, agency and government analytics.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric title="Visa Success Rate" value={`${stats.successRate}%`} />
+        <Metric title="Avg Processing Time" value={`${stats.avgDays} days`} />
+        <Metric title="Pending Gov Cases" value={String(stats.govPending)} />
+        <Metric title="Payment Pending" value={String(stats.paymentPending)} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Rejection Analysis</CardTitle>
+            <CardDescription>MOHRE / ICP rejection reasons</CardDescription>
+          </CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.rejectionData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#ef4444" radius={[10, 10, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Country Statistics</CardTitle>
+          </CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={stats.country} dataKey="value" nameKey="name" outerRadius={95}>
+                  {stats.country.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Agency Performance</CardTitle>
+          </CardHeader>
+          <CardContent className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.agencyPerf}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Bar dataKey="rate" fill="#3b82f6" radius={[10, 10, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Vacancy Fulfillment</CardTitle>
+          </CardHeader>
+          <CardContent className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.fulfillment}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="filled" fill="#60a5fa" radius={[10, 10, 0, 0]} />
+                <Bar dataKey="required" fill="#cbd5e1" radius={[10, 10, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Metric({ title, value }: { title: string; value: string }) {
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <p className="text-xs text-muted-foreground">{title}</p>
+        <p className="text-2xl font-bold">{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
