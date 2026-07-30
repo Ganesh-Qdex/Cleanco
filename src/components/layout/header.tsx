@@ -54,7 +54,7 @@ export function Header() {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               setSearch(query);
-              router.push("/candidates");
+              router.push("/vacancies");
             }
           }}
           placeholder="Search candidate, passport, company, vacancy..."

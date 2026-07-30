@@ -10,7 +10,9 @@ import {
   CheckCircle2,
   Circle,
   XCircle,
-  ArrowRight,
+  Download,
+  Pencil,
+  ShieldAlert,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,10 +35,13 @@ import {
   getStageDefinition,
   getNextStage,
   canTransition,
-  WORKFLOW_STAGES,
+  PIPELINE_COLUMNS,
+  requiresPoliceVerification,
+  type StageAction,
 } from "@/lib/workflow";
 import { daysBetween, formatCurrency, formatDate, initials } from "@/lib/utils";
 import { toast } from "sonner";
+import type { DocumentFile } from "@/types";
 
 export function CandidateDrawer() {
   const selectedId = useAppStore((s) => s.selectedCandidateId);
@@ -50,8 +55,6 @@ export function CandidateDrawer() {
 
   const [remarks, setRemarks] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
-  const [receipt, setReceipt] = useState("");
-  const [delayReason, setDelayReason] = useState("");
 
   const candidate = useMemo(
     () => candidates.find((c) => c.id === selectedId),
@@ -68,17 +71,18 @@ export function CandidateDrawer() {
       : false;
 
   const daysInStage = candidate ? daysBetween(candidate.stageEnteredAt) : 0;
+  const needsPolice =
+    candidate && requiresPoliceVerification(candidate.nationality);
 
   const resetForm = () => {
     setRemarks("");
     setRejectionReason("");
-    setReceipt("");
-    setDelayReason("");
   };
 
-  const handleAdvance = (decision?: "approved" | "rejected") => {
-    if (!candidate || !user) return;
-    if (decision === "rejected") {
+  const runAction = (action: StageAction) => {
+    if (!candidate || !user || !stage) return;
+
+    if (action.type === "reject") {
       rejectCandidate(
         candidate.id,
         rejectionReason || remarks || "Rejected",
@@ -89,38 +93,83 @@ export function CandidateDrawer() {
       return;
     }
 
-    const fee = stage?.fee;
-    advanceCandidate(candidate.id, {
-      remarks: remarks || `Advanced from ${stage?.label}`,
-      decision: stage?.decision ? "approved" : undefined,
-      actor: user.name,
-      offerIssueDate:
-        candidate.currentStage === "offer_issued"
-          ? new Date().toISOString()
-          : undefined,
-      paymentAmount: fee,
-      paymentDate: fee ? new Date().toISOString() : undefined,
-      paymentReceipt: fee ? receipt || `RCP-${Date.now().toString().slice(-6)}` : undefined,
-      paymentDelayReason: delayReason || undefined,
-      visaFileName:
-        candidate.currentStage === "hr_processing"
-          ? `${candidate.name.replace(/\s/g, "_")}_${candidate.passportNumber}_visa.pdf`
-          : undefined,
-      documents:
-        candidate.currentStage === "visa_issued"
+    if (action.type === "download") {
+      toast.success(`${action.label} — file ready (mock download)`);
+      return;
+    }
+
+    if (action.type === "modify") {
+      toast.success("Nawakis modification recorded (mock)");
+      return;
+    }
+
+    // advance
+    const docs: DocumentFile[] | undefined =
+      action.id === "upload_visa"
+        ? [
+            {
+              id: `doc-visa-${Date.now()}`,
+              type: "visa_pdf",
+              name: `visa_${candidate.passportNumber}.pdf`,
+              url: "#visa",
+              uploadedAt: new Date().toISOString(),
+              uploadedBy: user.name,
+            },
+          ]
+        : action.id === "upload_tickets"
           ? [
               {
-                id: `doc-visa-${Date.now()}`,
-                type: "visa_pdf",
-                name: `visa_${candidate.passportNumber}.pdf`,
-                url: "#visa",
+                id: `doc-ticket-${Date.now()}`,
+                type: "flight_ticket",
+                name: `ticket_${candidate.passportNumber}.pdf`,
+                url: "#ticket",
                 uploadedAt: new Date().toISOString(),
                 uploadedBy: user.name,
               },
             ]
+          : action.id === "upload_send_mol" || action.id === "create_mol"
+            ? [
+                {
+                  id: `doc-mol-${Date.now()}`,
+                  type: "mol_offer",
+                  name: `mol_${candidate.passportNumber}.pdf`,
+                  url: "#mol",
+                  uploadedAt: new Date().toISOString(),
+                  uploadedBy: user.name,
+                },
+              ]
+            : undefined;
+
+    const policeNote =
+      action.id === "send_offer" && needsPolice
+        ? " Police verification / good conduct certificate required for this nationality."
+        : "";
+
+    advanceCandidate(candidate.id, {
+      remarks:
+        remarks ||
+        `${action.label}.${policeNote}`,
+      decision: stage.decision ? "approved" : undefined,
+      actor: user.name,
+      offerIssueDate:
+        action.id === "send_offer" ? new Date().toISOString() : undefined,
+      paymentAmount: stage.fee,
+      paymentDate: stage.fee ? new Date().toISOString() : undefined,
+      paymentReceipt: stage.fee
+        ? `RCP-${Date.now().toString().slice(-6)}`
+        : undefined,
+      visaFileName:
+        action.id === "upload_visa"
+          ? `${candidate.name.replace(/\s/g, "_")}_${candidate.passportNumber}_visa.pdf`
           : undefined,
+      documents: docs,
     });
-    toast.success(`Moved to ${getStageDefinition(next!)?.label || "next stage"}`);
+
+    toast.success(
+      next
+        ? `Moved to ${getStageDefinition(next).shortLabel}`
+        : "Stage completed"
+    );
     resetForm();
   };
 
@@ -146,6 +195,9 @@ export function CandidateDrawer() {
                       {candidate.priority}
                     </Badge>
                     <Badge variant="outline">{candidate.jobRole}</Badge>
+                    {needsPolice && candidate.currentStage === "cv_received" && (
+                      <Badge variant="warning">Police verification required</Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -198,90 +250,94 @@ export function CandidateDrawer() {
                       )}
                     </div>
 
-                    {canAct && candidate.currentStage !== "completed" && candidate.currentStage !== "rejected" && (
-                      <div className="space-y-3">
-                        <div>
-                          <Label>Remarks</Label>
-                          <Textarea
-                            className="mt-1.5"
-                            value={remarks}
-                            onChange={(e) => setRemarks(e.target.value)}
-                            placeholder="Add stage remarks..."
-                          />
-                        </div>
-
-                        {stage.fee && (
-                          <>
-                            <div>
-                              <Label>Payment Receipt</Label>
-                              <Input
-                                className="mt-1.5"
-                                value={receipt}
-                                onChange={(e) => setReceipt(e.target.value)}
-                                placeholder="Receipt number"
-                              />
-                            </div>
-                            {stage.id === "mohre_approval" && (
-                              <div>
-                                <Label>Payment Delay Reason (optional)</Label>
-                                <Input
-                                  className="mt-1.5"
-                                  value={delayReason}
-                                  onChange={(e) => setDelayReason(e.target.value)}
-                                  placeholder="If payment delayed..."
-                                />
-                              </div>
-                            )}
-                          </>
-                        )}
-
-                        {stage.decision && (
+                    {canAct &&
+                      candidate.currentStage !== "completed" &&
+                      candidate.currentStage !== "rejected" && (
+                        <div className="space-y-3">
                           <div>
-                            <Label>Rejection Reason</Label>
-                            <Select value={rejectionReason} onValueChange={setRejectionReason}>
-                              <SelectTrigger className="mt-1.5">
-                                <SelectValue placeholder="Select reason if rejecting" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(stage.rejectionReasons || ["Other"]).map((r) => (
-                                  <SelectItem key={r} value={r}>
-                                    {r}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <Label>Remarks</Label>
+                            <Textarea
+                              className="mt-1.5"
+                              value={remarks}
+                              onChange={(e) => setRemarks(e.target.value)}
+                              placeholder="Add stage remarks..."
+                            />
                           </div>
-                        )}
 
-                        <div className="flex gap-2 pt-2">
                           {stage.decision && (
-                            <Button
-                              variant="destructive"
-                              className="flex-1"
-                              onClick={() => handleAdvance("rejected")}
-                            >
-                              Reject
-                            </Button>
+                            <div>
+                              <Label>Rejection Reason</Label>
+                              <Select
+                                value={rejectionReason}
+                                onValueChange={setRejectionReason}
+                              >
+                                <SelectTrigger className="mt-1.5">
+                                  <SelectValue placeholder="Select reason if rejecting" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(stage.rejectionReasons || ["Other"]).map((r) => (
+                                    <SelectItem key={r} value={r}>
+                                      {r}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           )}
-                          {next && (
-                            <Button className="flex-1" onClick={() => handleAdvance("approved")}>
-                              {stage.decision ? "Approve & Continue" : "Complete Stage"}
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          )}
+
+                          <div className="flex flex-col gap-2 pt-1">
+                            {stage.actions.map((action) => {
+                              const isReject = action.type === "reject";
+                              const isDownload = action.type === "download";
+                              const isModify = action.type === "modify";
+                              const showPoliceNote =
+                                action.id === "send_offer" && needsPolice;
+
+                              return (
+                                <div key={action.id} className="space-y-1.5">
+                                  <Button
+                                    variant={
+                                      isReject
+                                        ? "destructive"
+                                        : isDownload || isModify
+                                          ? "outline"
+                                          : "default"
+                                    }
+                                    className="w-full justify-center"
+                                    onClick={() => runAction(action)}
+                                  >
+                                    {isDownload && <Download className="h-4 w-4" />}
+                                    {isModify && <Pencil className="h-4 w-4" />}
+                                    {action.label}
+                                  </Button>
+                                  {showPoliceNote && (
+                                    <p className="flex items-start gap-1.5 text-xs text-amber-600">
+                                      <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                      Police verification / good conduct certificate
+                                      required for {candidate.nationality}.
+                                    </p>
+                                  )}
+                                  {action.note && !showPoliceNote && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {action.note}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {!canAct && (
                       <p className="text-sm text-muted-foreground">
-                        Your role cannot update this government/business stage.
+                        Your role cannot update this stage.
                       </p>
                     )}
                   </TabsContent>
 
                   <TabsContent value="timeline">
-                    <ol className="relative space-y-4 border-l border-border/70 ml-3">
+                    <ol className="relative ml-3 space-y-4 border-l border-border/70">
                       {candidate.history.map((h) => {
                         const def = getStageDefinition(h.stage);
                         const Icon =
@@ -307,7 +363,8 @@ export function CandidateDrawer() {
                               <p className="text-sm font-medium">{def?.label || h.stage}</p>
                               <p className="mt-0.5 text-xs text-muted-foreground">
                                 {formatDate(h.enteredAt)}
-                                {h.daysSpent != null && ` · ${h.daysSpent}d`} · {h.responsibleTeam}
+                                {h.daysSpent != null && ` · ${h.daysSpent}d`} ·{" "}
+                                {h.responsibleTeam}
                               </p>
                               {h.remarks && (
                                 <p className="mt-1 text-xs text-foreground/80">{h.remarks}</p>
@@ -380,7 +437,7 @@ export function CandidateDrawer() {
                     Workflow Progress
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {WORKFLOW_STAGES.filter((s) => s.id !== "rejected").map((s) => {
+                    {PIPELINE_COLUMNS.map((s) => {
                       const done = candidate.history.some(
                         (h) => h.stage === s.id && h.status === "completed"
                       );
@@ -389,7 +446,7 @@ export function CandidateDrawer() {
                         <span
                           key={s.id}
                           title={s.label}
-                          className={`h-2 w-2 rounded-full ${
+                          className={`h-2.5 w-2.5 rounded-full ${
                             current
                               ? "bg-primary ring-2 ring-primary/30"
                               : done

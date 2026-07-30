@@ -60,7 +60,7 @@ export default function DashboardPage() {
       {
         label: "Visa Issued",
         value: scoped.filter((c) =>
-          ["visa_issued", "hr_processing", "visa_shared_agency", "completed"].includes(c.currentStage)
+          ["upload_visa", "flight_bookings", "completed"].includes(c.currentStage)
         ).length,
         icon: Plane,
         tone: "text-teal-600",
@@ -74,7 +74,7 @@ export default function DashboardPage() {
       {
         label: "MOHRE Pending",
         value: scoped.filter((c) =>
-          ["mohre_submitted", "police_verification", "labour_contract", "mohre_approval"].includes(
+          ["upload_preapproved_mol", "stage2_signed_nawakis", "mohre_approved"].includes(
             c.currentStage
           )
         ).length,
@@ -82,17 +82,15 @@ export default function DashboardPage() {
         tone: "text-amber-600",
       },
       {
-        label: "ICP Pending",
-        value: scoped.filter((c) =>
-          ["visa_application_icp", "icp_payment", "icp_decision"].includes(c.currentStage)
-        ).length,
+        label: "ICP / Visa Pending",
+        value: scoped.filter((c) => c.currentStage === "upload_visa").length,
         icon: FileWarning,
         tone: "text-violet-600",
       },
       {
         label: "Agency Pending",
         value: scoped.filter((c) =>
-          ["cv_received", "signed_offer", "candidate_signs_mol"].includes(c.currentStage)
+          ["cv_received", "signed_offer_docs"].includes(c.currentStage)
         ).length,
         icon: Building2,
         tone: "text-sky-600",
@@ -100,7 +98,7 @@ export default function DashboardPage() {
       {
         label: "Processing",
         value: scoped.filter(
-          (c) => !["completed", "rejected", "visa_shared_agency"].includes(c.currentStage)
+          (c) => !["completed", "rejected"].includes(c.currentStage)
         ).length,
         icon: Loader2,
         tone: "text-primary",
@@ -140,7 +138,9 @@ export default function DashboardPage() {
     return agencies.slice(0, 6).map((a) => {
       const total = scoped.filter((c) => c.agencyId === a.id).length;
       const done = scoped.filter(
-        (c) => c.agencyId === a.id && ["completed", "visa_shared_agency", "visa_issued"].includes(c.currentStage)
+        (c) =>
+          c.agencyId === a.id &&
+          ["completed", "flight_bookings", "upload_visa"].includes(c.currentStage)
       ).length;
       return { name: a.name.split(" ")[0], success: total ? Math.round((done / total) * 100) : a.successRate };
     });

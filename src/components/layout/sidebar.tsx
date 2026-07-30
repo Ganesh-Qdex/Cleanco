@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Briefcase,
-  Users,
   Kanban,
   Landmark,
   BarChart3,
@@ -28,8 +27,7 @@ const NAV: {
   roles: UserRole[];
 }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "pro", "agency"] },
-  { href: "/vacancies", label: "Vacancies", icon: Briefcase, roles: ["admin", "agency"] },
-  { href: "/candidates", label: "Candidates", icon: Users, roles: ["admin", "pro", "agency"] },
+  { href: "/vacancies", label: "Vacancies", icon: Briefcase, roles: ["admin", "pro", "agency"] },
   { href: "/pipeline", label: "Pipeline", icon: Kanban, roles: ["admin", "pro", "agency"] },
   { href: "/government", label: "Government", icon: Landmark, roles: ["admin", "pro"] },
   { href: "/payments", label: "Payments", icon: CreditCard, roles: ["admin", "pro"] },

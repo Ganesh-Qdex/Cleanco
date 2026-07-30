@@ -6,27 +6,13 @@ export type DecisionStatus = "pending" | "approved" | "rejected";
 export type PaymentStatus = "pending" | "paid" | "delayed";
 
 export type WorkflowStage =
-  | "manpower_request"
-  | "vacancy_submitted"
   | "cv_received"
-  | "basic_screening"
-  | "offer_issued"
-  | "signed_offer"
-  | "mol_offer_created"
-  | "mohre_submitted"
-  | "police_verification"
-  | "labour_contract"
-  | "download_mohre_offer"
-  | "send_mol_agency"
-  | "candidate_signs_mol"
-  | "upload_signed_mol"
-  | "mohre_approval"
-  | "visa_application_icp"
-  | "icp_payment"
-  | "icp_decision"
-  | "visa_issued"
-  | "hr_processing"
-  | "visa_shared_agency"
+  | "signed_offer_docs"
+  | "upload_preapproved_mol"
+  | "stage2_signed_nawakis"
+  | "mohre_approved"
+  | "upload_visa"
+  | "flight_bookings"
   | "completed"
   | "rejected";
 
@@ -80,6 +66,7 @@ export interface DocumentFile {
     | "signed_mol"
     | "mohre_approval"
     | "visa_pdf"
+    | "flight_ticket"
     | "other";
   name: string;
   url: string;

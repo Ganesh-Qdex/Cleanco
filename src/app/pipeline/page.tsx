@@ -101,6 +101,7 @@ export default function PipelinePage() {
                   {s.shortLabel}
                 </SelectItem>
               ))}
+              <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -113,6 +114,8 @@ export default function PipelinePage() {
                 stage: "",
                 priority: "",
                 visaStatus: "",
+                vacancyId: "",
+                vacancyStatus: "",
               });
               setSearch("");
             }}

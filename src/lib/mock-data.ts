@@ -91,7 +91,7 @@ const COMPANIES = [
 const PRIORITIES: Priority[] = ["low", "medium", "high", "urgent"];
 
 const PIPELINE_STAGES: WorkflowStage[] = WORKFLOW_STAGES.filter(
-  (s) => !["manpower_request", "completed", "rejected"].includes(s.id)
+  (s) => !["completed", "rejected"].includes(s.id)
 ).map((s) => s.id);
 
 function makeDoc(
@@ -113,12 +113,19 @@ function makeDoc(
 function buildHistory(
   currentStage: WorkflowStage,
   createdAt: string,
-  agencyName: string,
+  _agencyName: string,
   isRejected: boolean
 ): StageHistoryEntry[] {
   const history: StageHistoryEntry[] = [];
   let stage: WorkflowStage | null = "cv_received";
   let entered = new Date(createdAt);
+
+  const rejectable: WorkflowStage[] = [
+    "cv_received",
+    "upload_preapproved_mol",
+    "mohre_approved",
+    "upload_visa",
+  ];
 
   while (stage) {
     const def = WORKFLOW_STAGES.find((s) => s.id === stage)!;
@@ -128,16 +135,19 @@ function buildHistory(
 
     const isCurrent = stage === currentStage && !isRejected;
     const shouldReject =
-      isRejected &&
-      stage === currentStage &&
-      (stage === "basic_screening" || stage === "mohre_approval" || stage === "icp_decision");
+      isRejected && stage === currentStage && rejectable.includes(stage);
 
     history.push({
       id: `hist-${stage}-${Math.floor(rand() * 1e9)}`,
       stage,
       status: shouldReject ? "rejected" : isCurrent ? "in_progress" : "completed",
       enteredAt: entered.toISOString(),
-      completedAt: isCurrent || shouldReject ? (shouldReject ? completed.toISOString() : undefined) : completed.toISOString(),
+      completedAt:
+        isCurrent || shouldReject
+          ? shouldReject
+            ? completed.toISOString()
+            : undefined
+          : completed.toISOString(),
       daysSpent: isCurrent ? daysAgo(entered.toISOString()) : daysInStage,
       responsibleTeam: def.responsibility,
       remarks: shouldReject
@@ -145,8 +155,14 @@ function buildHistory(
         : isCurrent
           ? "In progress"
           : "Completed successfully",
-      decision: shouldReject ? "rejected" : def.decision && !isCurrent ? "approved" : undefined,
-      rejectionReason: shouldReject ? pick(def.rejectionReasons || ["Document issue"]) : undefined,
+      decision: shouldReject
+        ? "rejected"
+        : def.decision && !isCurrent
+          ? "approved"
+          : undefined,
+      rejectionReason: shouldReject
+        ? pick(def.rejectionReasons || ["Document issue"])
+        : undefined,
       paymentAmount: def.fee && !isCurrent && !shouldReject ? def.fee : undefined,
       paymentDate: def.fee && !isCurrent && !shouldReject ? completed.toISOString() : undefined,
     });
@@ -220,25 +236,31 @@ export function generateCandidates(agencies: Agency[], vacancies: Vacancy[]): Ca
     let currentStage: WorkflowStage;
 
     if (isRejected) {
-      currentStage = pick(["basic_screening", "mohre_approval", "icp_decision"] as WorkflowStage[]);
+      currentStage = pick([
+        "cv_received",
+        "upload_preapproved_mol",
+        "mohre_approved",
+        "upload_visa",
+      ] as WorkflowStage[]);
     } else {
-      // Weighted towards mid/late stages for realism
       const weight = rand();
-      if (weight < 0.12) currentStage = "completed";
-      else if (weight < 0.18) currentStage = pick(["visa_issued", "hr_processing", "visa_shared_agency"]);
-      else if (weight < 0.35) currentStage = pick(["mohre_approval", "visa_application_icp", "icp_payment", "icp_decision"]);
-      else if (weight < 0.55) currentStage = pick(["mol_offer_created", "mohre_submitted", "police_verification", "labour_contract", "download_mohre_offer", "send_mol_agency", "candidate_signs_mol", "upload_signed_mol"]);
-      else currentStage = pick(["cv_received", "basic_screening", "offer_issued", "signed_offer"]);
+      if (weight < 0.1) currentStage = "completed";
+      else if (weight < 0.22) currentStage = "flight_bookings";
+      else if (weight < 0.36) currentStage = "upload_visa";
+      else if (weight < 0.5) currentStage = "mohre_approved";
+      else if (weight < 0.62) currentStage = "stage2_signed_nawakis";
+      else if (weight < 0.74) currentStage = "upload_preapproved_mol";
+      else if (weight < 0.86) currentStage = "signed_offer_docs";
+      else currentStage = "cv_received";
     }
 
     const history = buildHistory(currentStage, createdAt, agency.name, isRejected);
     const stageEntered = history[history.length - 1]?.enteredAt || createdAt;
+    const idx = getStageIndexSafe(currentStage);
 
     const docs: DocumentFile[] = [];
-    if (getStageIndexSafe(currentStage) >= 3 || currentStage === "completed" || isRejected) {
-      docs.push(makeDoc("cv", name, agency.name, createdAt));
-    }
-    if (getStageIndexSafe(currentStage) >= 6 || currentStage === "completed") {
+    docs.push(makeDoc("cv", name, agency.name, createdAt));
+    if (idx >= 1 || currentStage === "completed") {
       docs.push(
         makeDoc("passport", name, agency.name, stageEntered),
         makeDoc("photo", name, agency.name, stageEntered),
@@ -246,14 +268,17 @@ export function generateCandidates(agencies: Agency[], vacancies: Vacancy[]): Ca
         makeDoc("signed_offer", name, agency.name, stageEntered)
       );
     }
-    if (getStageIndexSafe(currentStage) >= 14 || currentStage === "completed") {
+    if (idx >= 2 || currentStage === "completed") {
+      docs.push(makeDoc("mol_offer", name, "PRO Team", stageEntered));
+    }
+    if (idx >= 3 || currentStage === "completed") {
       docs.push(makeDoc("signed_mol", name, "PRO Team", stageEntered));
     }
-    if (
-      (getStageIndexSafe(currentStage) >= 19 || currentStage === "completed") &&
-      !isRejected
-    ) {
+    if ((idx >= 5 || currentStage === "completed") && !isRejected) {
       docs.push(makeDoc("visa_pdf", name, "PRO Team", stageEntered));
+    }
+    if ((idx >= 6 || currentStage === "completed") && !isRejected) {
+      docs.push(makeDoc("flight_ticket", name, "Admin", stageEntered));
     }
 
     const finalStage: WorkflowStage = isRejected ? "rejected" : currentStage;
@@ -278,39 +303,37 @@ export function generateCandidates(agencies: Agency[], vacancies: Vacancy[]): Ca
           ]
         : history,
       offerIssueDate:
-        getStageIndexSafe(currentStage) >= 5 || currentStage === "completed"
+        idx >= 1 || currentStage === "completed"
           ? randomDate(daysAgo(createdAt), 2)
           : undefined,
       mohreStatus:
-        finalStage === "rejected" && currentStage === "mohre_approval"
+        finalStage === "rejected" && currentStage === "mohre_approved"
           ? "rejected"
-          : getStageIndexSafe(currentStage) > 15 || currentStage === "completed"
+          : idx >= 4 || currentStage === "completed"
             ? "approved"
-            : getStageIndexSafe(currentStage) === 15
+            : idx === 4
               ? "pending"
               : undefined,
       mohreRejectionReason:
-        finalStage === "rejected" && currentStage === "mohre_approval"
+        finalStage === "rejected" && currentStage === "mohre_approved"
           ? pick(["Company block", "Police case", "Document issue"])
           : undefined,
       icpStatus:
-        finalStage === "rejected" && currentStage === "icp_decision"
+        finalStage === "rejected" && currentStage === "upload_visa"
           ? "rejected"
-          : getStageIndexSafe(currentStage) > 18 || currentStage === "completed"
+          : idx >= 5 || currentStage === "completed"
             ? "approved"
-            : getStageIndexSafe(currentStage) === 18
-              ? "pending"
-              : undefined,
+            : undefined,
       icpRejectionReason:
-        finalStage === "rejected" && currentStage === "icp_decision"
+        finalStage === "rejected" && currentStage === "upload_visa"
           ? pick(["Police case", "Document issue (personal)"])
           : undefined,
       labourContractFee:
-        getStageIndexSafe(currentStage) >= 10 || currentStage === "completed"
+        idx >= 2 || currentStage === "completed"
           ? { amount: 50, status: "paid", date: randomDate(60, 5) }
           : undefined,
       mohrePayment:
-        getStageIndexSafe(currentStage) >= 15 || currentStage === "completed"
+        idx >= 4 || currentStage === "completed"
           ? {
               amount: 1800,
               status: rand() > 0.15 ? "paid" : rand() > 0.5 ? "delayed" : "pending",
@@ -318,11 +341,9 @@ export function generateCandidates(agencies: Agency[], vacancies: Vacancy[]): Ca
               receipt: `RCP-MH-${Math.floor(10000 + rand() * 89999)}`,
               delayReason: rand() > 0.7 ? "Awaiting finance approval" : undefined,
             }
-          : getStageIndexSafe(currentStage) === 15
-            ? { amount: 1800, status: "pending" }
-            : undefined,
+          : undefined,
       icpPayment:
-        getStageIndexSafe(currentStage) >= 17 || currentStage === "completed"
+        idx >= 5 || currentStage === "completed"
           ? {
               amount: 800,
               status: rand() > 0.2 ? "paid" : "pending",
@@ -331,7 +352,7 @@ export function generateCandidates(agencies: Agency[], vacancies: Vacancy[]): Ca
             }
           : undefined,
       visaFileName:
-        getStageIndexSafe(currentStage) >= 20 || currentStage === "completed"
+        idx >= 5 || currentStage === "completed"
           ? `${name.replace(/\s/g, "_")}_${pick(["IN", "NP", "PK"])}1234567_visa.pdf`
           : undefined,
       remarks: "",

@@ -65,7 +65,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 sm:grid-cols-2">
-              {WORKFLOW_STAGES.filter((s) => s.id !== "rejected").map((s) => (
+              {WORKFLOW_STAGES.filter((s) => s.id !== "rejected" && s.id !== "completed").map((s) => (
                 <div key={s.id} className="rounded-2xl border border-border/50 px-3 py-2">
                   <div className="flex items-center gap-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
@@ -77,6 +77,11 @@ export default function SettingsPage() {
                     {s.responsibility}
                     {s.fee ? ` · Fee ${s.fee} AED` : ""}
                   </p>
+                  {s.actions.length > 0 && (
+                    <p className="mt-1 text-[11px] text-primary/80">
+                      Actions: {s.actions.map((a) => a.label).join(" · ")}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -93,6 +98,7 @@ export default function SettingsPage() {
               variant="destructive"
               onClick={() => {
                 localStorage.removeItem("cleanco-app-data");
+                localStorage.removeItem("cleanco-app-data-v2");
                 toast.success("Cleared app data — reload to regenerate");
                 setTimeout(() => window.location.reload(), 600);
               }}

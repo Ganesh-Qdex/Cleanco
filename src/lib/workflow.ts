@@ -1,5 +1,15 @@
 import type { UserRole, WorkflowStage } from "@/types";
 
+export type StageActionType = "reject" | "advance" | "download" | "modify";
+
+export interface StageAction {
+  id: string;
+  label: string;
+  type: StageActionType;
+  /** Shown under the primary advance button (e.g. police verification note) */
+  note?: string;
+}
+
 export interface StageDefinition {
   id: WorkflowStage;
   label: string;
@@ -13,245 +23,156 @@ export interface StageDefinition {
   decision?: boolean;
   rejectionReasons?: string[];
   color: string;
+  actions: StageAction[];
+}
+
+/** Nationalities that typically need police clearance / good conduct. */
+export const POLICE_VERIFICATION_COUNTRIES = [
+  "India",
+  "Pakistan",
+  "Bangladesh",
+  "Nepal",
+  "Sri Lanka",
+] as const;
+
+export function requiresPoliceVerification(nationality: string) {
+  return (POLICE_VERIFICATION_COUNTRIES as readonly string[]).includes(nationality);
 }
 
 export const WORKFLOW_STAGES: StageDefinition[] = [
   {
-    id: "manpower_request",
-    label: "Manpower Request Received",
-    shortLabel: "Request",
-    order: 1,
-    responsibility: "Business Unit / Admin",
-    purpose: "Receive manpower requirement from client.",
-    roles: ["admin"],
-    color: "#3B82F6",
-  },
-  {
-    id: "vacancy_submitted",
-    label: "Vacancy Submitted to Agencies",
-    shortLabel: "Submitted",
-    order: 2,
-    responsibility: "Admin",
-    purpose: "Assign vacancy to recruitment agencies.",
-    roles: ["admin"],
-    color: "#60A5FA",
-  },
-  {
     id: "cv_received",
-    label: "CV Received",
-    shortLabel: "CV",
-    order: 3,
-    responsibility: "Agency",
-    purpose: "Agency uploads candidate CVs.",
+    label: "CV received from agency",
+    shortLabel: "CV Received",
+    order: 1,
+    responsibility: "Admin / Recruitment Manager",
+    purpose: "Review CV from agency. Reject or send offer letter (police verification if required).",
     documents: ["CV"],
-    roles: ["agency", "admin"],
-    color: "#93C5FD",
-  },
-  {
-    id: "basic_screening",
-    label: "Basic Screening",
-    shortLabel: "Screening",
-    order: 4,
-    responsibility: "Recruitment Manager",
-    purpose: "Review candidate profile.",
     roles: ["admin"],
     decision: true,
-    color: "#2563EB",
-  },
-  {
-    id: "offer_issued",
-    label: "Offer Letter Issued",
-    shortLabel: "Offer",
-    order: 5,
-    responsibility: "Recruitment Manager",
-    purpose: "Generate Offer Letter. Record offer issue date.",
-    roles: ["admin"],
-    color: "#1D4ED8",
-  },
-  {
-    id: "signed_offer",
-    label: "Signed Offer Received",
-    shortLabel: "Signed Offer",
-    order: 6,
-    responsibility: "Agency",
-    purpose: "Collect signed offer and required documents.",
-    documents: [
-      "Passport",
-      "Candidate Photo",
-      "Police Clearance / Good Conduct",
-      "Signed Offer Letter",
+    rejectionReasons: ["Profile mismatch", "Document issue", "Not suitable"],
+    color: "#3B82F6",
+    actions: [
+      { id: "reject", label: "Rejected", type: "reject" },
+      {
+        id: "send_offer",
+        label: "Send offer letter to agency",
+        type: "advance",
+        note: "Police verification / good conduct certificate required if applicable for nationality",
+      },
     ],
-    roles: ["agency", "admin"],
-    color: "#1E40AF",
   },
   {
-    id: "mol_offer_created",
-    label: "PRO Creates MOL Offer",
-    shortLabel: "MOL Create",
-    order: 7,
+    id: "signed_offer_docs",
+    label: "Stage 1 - Signed offer letters with docs (Pro)",
+    shortLabel: "Stage 1 Offer",
+    order: 2,
     responsibility: "PRO Team",
-    purpose: "Generate MOL Offer (~40 applications/day).",
+    purpose: "Signed offer + passport, photo, police clearance received. Create and download MOL.",
+    documents: ["Signed Offer", "Passport", "Photo", "Police Clearance"],
     roles: ["pro", "admin"],
     color: "#F59E0B",
+    actions: [
+      { id: "create_mol", label: "Create MOL", type: "advance" },
+      { id: "download_mol", label: "DOWNLOAD MOL", type: "download" },
+    ],
   },
   {
-    id: "mohre_submitted",
-    label: "MOHRE Application Submitted",
-    shortLabel: "MOHRE Sub",
-    order: 8,
-    responsibility: "PRO",
-    purpose: "Submit application to MOHRE.",
+    id: "upload_preapproved_mol",
+    label: "Upload pre approved MOL Letter",
+    shortLabel: "Pre-approved MOL",
+    order: 3,
+    responsibility: "PRO / Admin",
+    purpose: "Upload pre-approved MOL and send to agency, or reject.",
+    documents: ["MOL Offer"],
     roles: ["pro", "admin"],
-    color: "#FBBF24",
-  },
-  {
-    id: "police_verification",
-    label: "Police Verification",
-    shortLabel: "Police",
-    order: 9,
-    responsibility: "Government",
-    purpose: "Country-specific police verification checklist.",
-    roles: ["pro", "admin"],
+    decision: true,
+    rejectionReasons: ["Company block", "Document issue", "MOL error"],
     color: "#F97316",
+    actions: [
+      { id: "reject", label: "Rejected", type: "reject" },
+      {
+        id: "upload_send_mol",
+        label: "Upload the MOL and send to agency",
+        type: "advance",
+      },
+    ],
   },
   {
-    id: "labour_contract",
-    label: "MOHRE Labour Contract Issued",
-    shortLabel: "Contract",
-    order: 10,
-    responsibility: "Government",
-    purpose: "Pre-approval labour contract issued.",
-    fee: 50,
-    roles: ["pro", "admin"],
-    color: "#EA580C",
-  },
-  {
-    id: "download_mohre_offer",
-    label: "Download MOHRE Offer Letter",
-    shortLabel: "Download",
-    order: 11,
-    responsibility: "PRO",
-    purpose: "Download the MOHRE offer letter.",
-    roles: ["pro", "admin"],
-    color: "#DC2626",
-  },
-  {
-    id: "send_mol_agency",
-    label: "Send MOL to Agency",
-    shortLabel: "Send MOL",
-    order: 12,
-    responsibility: "HR / PRO",
-    purpose: "Share MOL offer with agency.",
+    id: "stage2_signed_nawakis",
+    label: "Stage 2 - signed offer/Nawakis (PRO)",
+    shortLabel: "Nawakis",
+    order: 4,
+    responsibility: "PRO Team",
+    purpose: "Modification of MOL offer (Nawakis) — modify and download.",
     roles: ["pro", "admin"],
     color: "#EF4444",
+    actions: [
+      { id: "modify", label: "Modify", type: "modify" },
+      { id: "download", label: "Download", type: "advance" },
+    ],
   },
   {
-    id: "candidate_signs_mol",
-    label: "Candidate Signs MOL",
-    shortLabel: "Sign MOL",
-    order: 13,
-    responsibility: "Agency",
-    purpose: "Collect candidate signature on MOL.",
-    roles: ["agency", "admin"],
-    color: "#F87171",
-  },
-  {
-    id: "upload_signed_mol",
-    label: "Upload Signed MOL",
-    shortLabel: "Upload MOL",
-    order: 14,
-    responsibility: "PRO",
-    purpose: "Upload signed MOL offer.",
-    documents: ["Signed MOL"],
-    roles: ["pro", "admin"],
-    color: "#FB7185",
-  },
-  {
-    id: "mohre_approval",
-    label: "MOHRE Approval",
-    shortLabel: "MOHRE",
-    order: 15,
-    responsibility: "Government / PRO",
-    purpose: "MOHRE approval or rejection. Fee 1800 AED.",
+    id: "mohre_approved",
+    label: "Mohre approved candidates",
+    shortLabel: "MOHRE Approved",
+    order: 5,
+    responsibility: "PRO / Government",
+    purpose: "MOHRE approved. Download offer letter and proceed to ICP portal, or reject.",
     fee: 1800,
     roles: ["pro", "admin"],
     decision: true,
     rejectionReasons: ["Company block", "Police case", "Document issue"],
     color: "#BE185D",
+    actions: [
+      { id: "reject", label: "Rejected", type: "reject" },
+      {
+        id: "download_icp",
+        label: "Download Mohre offer letter and ICP portal",
+        type: "advance",
+      },
+    ],
   },
   {
-    id: "visa_application_icp",
-    label: "Visa Application (ICP)",
-    shortLabel: "ICP App",
-    order: 16,
-    responsibility: "PRO",
-    purpose: "Upload visa application in ICP portal.",
-    roles: ["pro", "admin"],
-    color: "#7C3AED",
-  },
-  {
-    id: "icp_payment",
-    label: "ICP Payment",
-    shortLabel: "ICP Pay",
-    order: 17,
-    responsibility: "PRO",
-    purpose: "Record ICP payment. Fee 800 AED.",
+    id: "upload_visa",
+    label: "Upload approved visa",
+    shortLabel: "Upload Visa",
+    order: 6,
+    responsibility: "PRO / Admin",
+    purpose: "Upload approved visa PDF or reject.",
+    documents: ["Visa PDF"],
     fee: 800,
     roles: ["pro", "admin"],
-    color: "#8B5CF6",
-  },
-  {
-    id: "icp_decision",
-    label: "ICP Decision",
-    shortLabel: "ICP",
-    order: 18,
-    responsibility: "Government / PRO",
-    purpose: "ICP approval or rejection.",
-    roles: ["pro", "admin"],
     decision: true,
-    rejectionReasons: ["Police case", "Document issue (personal)"],
-    color: "#A78BFA",
-  },
-  {
-    id: "visa_issued",
-    label: "Visa Issued",
-    shortLabel: "Visa",
-    order: 19,
-    responsibility: "Government",
-    purpose: "Visa issued successfully. Upload visa PDF.",
-    documents: ["Visa PDF"],
-    roles: ["pro", "admin"],
+    rejectionReasons: ["Police case", "Document issue (personal)", "ICP rejection"],
     color: "#10B981",
+    actions: [
+      { id: "reject", label: "Reject", type: "reject" },
+      { id: "upload_visa", label: "Upload visa", type: "advance" },
+    ],
   },
   {
-    id: "hr_processing",
-    label: "HR Processing",
-    shortLabel: "HR",
-    order: 20,
-    responsibility: "HR",
-    purpose: "Rename visa file (passport/name) & share with HR.",
+    id: "flight_bookings",
+    label: "Flight bookings",
+    shortLabel: "Flights",
+    order: 7,
+    responsibility: "Admin / HR",
+    purpose: "Upload flight tickets for candidate travel.",
+    documents: ["Flight Tickets"],
     roles: ["admin", "pro"],
-    color: "#34D399",
-  },
-  {
-    id: "visa_shared_agency",
-    label: "Visa Shared with Agency",
-    shortLabel: "Shared",
-    order: 21,
-    responsibility: "HR / Admin",
-    purpose: "Visa shared with agency. Workflow complete.",
-    roles: ["admin", "agency"],
     color: "#059669",
+    actions: [{ id: "upload_tickets", label: "Upload tickets", type: "advance" }],
   },
   {
     id: "completed",
     label: "Completed",
     shortLabel: "Done",
-    order: 22,
+    order: 8,
     responsibility: "System",
-    purpose: "Candidate visa process completed.",
+    purpose: "Candidate pipeline completed.",
     roles: ["admin", "pro", "agency"],
     color: "#047857",
+    actions: [],
   },
   {
     id: "rejected",
@@ -259,31 +180,30 @@ export const WORKFLOW_STAGES: StageDefinition[] = [
     shortLabel: "Rejected",
     order: 99,
     responsibility: "System",
-    purpose: "Candidate rejected at a decision stage.",
+    purpose: "Candidate rejected.",
     roles: ["admin", "pro", "agency"],
     color: "#EF4444",
+    actions: [],
   },
 ];
 
+/** Only the 7 operational pipeline columns. */
 export const PIPELINE_COLUMNS = WORKFLOW_STAGES.filter(
-  (s) => s.id !== "completed" && s.id !== "rejected" && s.id !== "manpower_request"
+  (s) => s.id !== "completed" && s.id !== "rejected"
 );
-
-export const ACTIVE_PIPELINE_STAGES = [
-  ...PIPELINE_COLUMNS.map((s) => s.id),
-  "completed" as const,
-  "rejected" as const,
-];
 
 const STAGE_ORDER = WORKFLOW_STAGES.filter((s) => s.id !== "rejected").map((s) => s.id);
 
 export function getStageDefinition(stage: WorkflowStage): StageDefinition {
-  return WORKFLOW_STAGES.find((s) => s.id === stage)!;
+  return (
+    WORKFLOW_STAGES.find((s) => s.id === stage) ||
+    WORKFLOW_STAGES.find((s) => s.id === "cv_received")!
+  );
 }
 
 export function getNextStage(current: WorkflowStage): WorkflowStage | null {
   if (current === "rejected" || current === "completed") return null;
-  if (current === "visa_shared_agency") return "completed";
+  if (current === "flight_bookings") return "completed";
   const idx = STAGE_ORDER.indexOf(current);
   if (idx === -1 || idx >= STAGE_ORDER.length - 1) return null;
   return STAGE_ORDER[idx + 1];
@@ -298,13 +218,8 @@ export function canTransition(
   if (!def) return false;
   if (role === "admin") return true;
   if (role === "agency") {
-    const agencyStages: WorkflowStage[] = [
-      "cv_received",
-      "signed_offer",
-      "candidate_signs_mol",
-      "visa_shared_agency",
-    ];
-    return agencyStages.includes(stage) && action !== "reject";
+    // Agency can view but only upload docs related stages via candidate module
+    return stage === "cv_received" && action !== "reject";
   }
   if (role === "pro") {
     return def.roles.includes("pro");

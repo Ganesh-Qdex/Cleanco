@@ -9,11 +9,12 @@ import {
   flexRender,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { Plus, Users } from "lucide-react";
+import { Plus, Upload, Users, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, Textarea } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -30,9 +31,9 @@ import {
 } from "@/components/ui/select";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
-import { JOB_ROLES, LOCATIONS } from "@/lib/workflow";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Priority, Vacancy } from "@/types";
+import { COUNTRIES, JOB_ROLES, LOCATIONS, getStageDefinition } from "@/lib/workflow";
+import { cn, daysBetween, formatCurrency, formatDate, initials } from "@/lib/utils";
+import type { Priority, Vacancy, VacancyStatus } from "@/types";
 import { toast } from "sonner";
 
 const columnHelper = createColumnHelper<Vacancy & { pending: number; remaining: number }>();
@@ -42,9 +43,16 @@ export default function VacanciesPage() {
   const candidates = useAppStore((s) => s.candidates);
   const agencies = useAppStore((s) => s.agencies);
   const addVacancy = useAppStore((s) => s.addVacancy);
+  const addCandidate = useAppStore((s) => s.addCandidate);
+  const setSelected = useAppStore((s) => s.setSelectedCandidate);
   const user = useAuthStore((s) => s.user);
+
   const [open, setOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [candidateSearch, setCandidateSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<VacancyStatus | "all">("all");
+  const [selectedVacancyId, setSelectedVacancyId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     companyName: "",
@@ -59,13 +67,41 @@ export default function VacanciesPage() {
     createdBy: user?.email || "admin@cleanco.com",
   });
 
+  const [candForm, setCandForm] = useState({
+    name: "",
+    passportNumber: "",
+    nationality: "India",
+    jobRole: "Cleaner",
+    vacancyId: "",
+    agencyId: user?.agencyId || "agency-1",
+    remarks: "",
+  });
+
+  const scopedVacancies = useMemo(() => {
+    return vacancies.filter((v) => {
+      if (user?.role === "agency" && user.agencyId) {
+        return v.agencyIds.includes(user.agencyId);
+      }
+      return true;
+    });
+  }, [vacancies, user]);
+
+  const statusCounts = useMemo(
+    () => ({
+      open: scopedVacancies.filter((v) => v.status === "open").length,
+      filled: scopedVacancies.filter((v) => v.status === "filled").length,
+      closed: scopedVacancies.filter((v) => v.status === "closed").length,
+    }),
+    [scopedVacancies]
+  );
+
   const rows = useMemo(() => {
-    return vacancies
+    return scopedVacancies
       .map((v) => {
         const pending = candidates.filter(
           (c) =>
             c.vacancyId === v.id &&
-            !["completed", "rejected", "visa_shared_agency"].includes(c.currentStage)
+            !["completed", "rejected"].includes(c.currentStage)
         ).length;
         return {
           ...v,
@@ -74,9 +110,7 @@ export default function VacanciesPage() {
         };
       })
       .filter((v) => {
-        if (user?.role === "agency" && user.agencyId) {
-          if (!v.agencyIds.includes(user.agencyId)) return false;
-        }
+        if (statusFilter !== "all" && v.status !== statusFilter) return false;
         if (!search) return true;
         const q = search.toLowerCase();
         return (
@@ -84,14 +118,51 @@ export default function VacanciesPage() {
           v.jobRole.toLowerCase().includes(q)
         );
       });
-  }, [vacancies, candidates, search, user]);
+  }, [scopedVacancies, candidates, search, statusFilter]);
+
+  const selectedVacancy = selectedVacancyId
+    ? vacancies.find((v) => v.id === selectedVacancyId)
+    : null;
+
+  const filteredCandidates = useMemo(() => {
+    const vacancyIds =
+      selectedVacancyId
+        ? [selectedVacancyId]
+        : rows.map((v) => v.id);
+
+    return candidates
+      .filter((c) => {
+        if (user?.role === "agency" && user.agencyId && c.agencyId !== user.agencyId) {
+          return false;
+        }
+        if (!vacancyIds.includes(c.vacancyId)) return false;
+        if (!candidateSearch) return true;
+        const q = candidateSearch.toLowerCase();
+        return (
+          c.name.toLowerCase().includes(q) ||
+          c.passportNumber.toLowerCase().includes(q) ||
+          c.nationality.toLowerCase().includes(q) ||
+          c.jobRole.toLowerCase().includes(q)
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+  }, [candidates, rows, selectedVacancyId, candidateSearch, user]);
+
+  const toggleStatus = (status: VacancyStatus) => {
+    setSelectedVacancyId(null);
+    setStatusFilter((prev) => (prev === status ? "all" : status));
+  };
 
   const columns = [
     columnHelper.accessor("companyName", { header: "Company" }),
     columnHelper.accessor("jobRole", { header: "Role" }),
     columnHelper.accessor("location", {
       header: "Location",
-      cell: (info) => LOCATIONS.find((l) => l.value === info.getValue())?.label || info.getValue(),
+      cell: (info) =>
+        LOCATIONS.find((l) => l.value === info.getValue())?.label || info.getValue(),
     }),
     columnHelper.accessor("quantityRequired", { header: "Required" }),
     columnHelper.accessor("filledCount", { header: "Filled" }),
@@ -147,10 +218,10 @@ export default function VacanciesPage() {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageSize: 8 } },
   });
 
-  const submit = () => {
+  const submitVacancy = () => {
     if (!form.companyName || !form.closingDate || form.agencyIds.length === 0) {
       toast.error("Fill company, closing date, and at least one agency");
       return;
@@ -160,6 +231,67 @@ export default function VacanciesPage() {
     setOpen(false);
   };
 
+  const canUpload = user?.role === "agency" || user?.role === "admin";
+
+  const openUpload = (vacancyId?: string) => {
+    const vac =
+      vacancies.find((v) => v.id === (vacancyId || selectedVacancyId)) ||
+      rows.find((v) => v.status === "open");
+    setCandForm({
+      name: "",
+      passportNumber: "",
+      nationality: "India",
+      jobRole: vac?.jobRole || "Cleaner",
+      vacancyId: vac?.id || "",
+      agencyId: user?.agencyId || vac?.agencyIds[0] || "agency-1",
+      remarks: "",
+    });
+    setUploadOpen(true);
+  };
+
+  const submitCandidate = () => {
+    if (!candForm.name || !candForm.passportNumber || !candForm.vacancyId) {
+      toast.error("Name, passport, and vacancy are required");
+      return;
+    }
+    const vacancy = vacancies.find((v) => v.id === candForm.vacancyId);
+    const now = new Date().toISOString();
+    addCandidate({
+      name: candForm.name,
+      passportNumber: candForm.passportNumber,
+      nationality: candForm.nationality,
+      jobRole: candForm.jobRole || vacancy?.jobRole || "Cleaner",
+      vacancyId: candForm.vacancyId,
+      agencyId: candForm.agencyId,
+      photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(candForm.name)}`,
+      currentStage: "cv_received",
+      priority: vacancy?.priority || "medium",
+      documents: [
+        {
+          id: `doc-cv-${Date.now()}`,
+          type: "cv",
+          name: `CV_${candForm.name.replace(/\s/g, "_")}.pdf`,
+          url: "#cv",
+          uploadedAt: now,
+          uploadedBy: user?.name || "Agency",
+        },
+      ],
+      remarks: candForm.remarks,
+    });
+    toast.success("Candidate uploaded");
+    setUploadOpen(false);
+    setSelectedVacancyId(candForm.vacancyId);
+    setStatusFilter("all");
+  };
+
+  const assignedOpenVacancies = scopedVacancies.filter((v) => v.status === "open");
+
+  const candidateFilterLabel = selectedVacancy
+    ? `${selectedVacancy.companyName} — ${selectedVacancy.jobRole}`
+    : statusFilter !== "all"
+      ? `${statusFilter} vacancies`
+      : "all vacancies";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -168,34 +300,68 @@ export default function VacanciesPage() {
             Vacancies
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Manpower requisitions and agency assignments.
+            Click Open / Filled / Closed to filter vacancies and candidates on this page.
           </p>
         </div>
-        {user?.role === "admin" && (
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Create Vacancy
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {canUpload && (
+            <Button variant="outline" onClick={() => openUpload()}>
+              <Upload className="h-4 w-4" />
+              Upload Candidate
+            </Button>
+          )}
+          {user?.role === "admin" && (
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Create Vacancy
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Open" value={vacancies.filter((v) => v.status === "open").length} />
-        <Stat label="Filled" value={vacancies.filter((v) => v.status === "filled").length} />
-        <Stat label="Closed" value={vacancies.filter((v) => v.status === "closed").length} />
+        <Stat
+          label="Open"
+          value={statusCounts.open}
+          active={statusFilter === "open"}
+          onClick={() => toggleStatus("open")}
+        />
+        <Stat
+          label="Filled"
+          value={statusCounts.filled}
+          active={statusFilter === "filled"}
+          onClick={() => toggleStatus("filled")}
+        />
+        <Stat
+          label="Closed"
+          value={statusCounts.closed}
+          active={statusFilter === "closed"}
+          onClick={() => toggleStatus("closed")}
+        />
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4" /> All Vacancies
+            <Users className="h-4 w-4" />
+            {statusFilter === "all"
+              ? "All Vacancies"
+              : `${statusFilter.charAt(0).toUpperCase()}${statusFilter.slice(1)} Vacancies`}
+            <Badge variant="muted">{rows.length}</Badge>
           </CardTitle>
-          <Input
-            className="max-w-xs"
-            placeholder="Search company or role..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            {statusFilter !== "all" && (
+              <Button variant="outline" size="sm" onClick={() => setStatusFilter("all")}>
+                Show all
+              </Button>
+            )}
+            <Input
+              className="max-w-xs"
+              placeholder="Search company or role..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -211,25 +377,132 @@ export default function VacanciesPage() {
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-b border-border/40 hover:bg-muted/30">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-3">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {table.getRowModel().rows.map((row) => {
+                const active = selectedVacancyId === row.original.id;
+                return (
+                  <tr
+                    key={row.id}
+                    className={cn(
+                      "cursor-pointer border-b border-border/40 hover:bg-muted/30",
+                      active && "bg-primary/5"
+                    )}
+                    onClick={() =>
+                      setSelectedVacancyId((id) =>
+                        id === row.original.id ? null : row.original.id
+                      )
+                    }
+                    title="Click to filter candidates for this vacancy"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-3 py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           <div className="mt-4 flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
               Previous
             </Button>
-            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
               Next
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              Candidates
+              <Badge variant="muted">{filteredCandidates.length}</Badge>
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Showing candidates for {candidateFilterLabel}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {(selectedVacancyId || statusFilter !== "all") && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedVacancyId(null);
+                  setStatusFilter("all");
+                }}
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear filter
+              </Button>
+            )}
+            <Input
+              className="max-w-xs"
+              placeholder="Search candidates..."
+              value={candidateSearch}
+              onChange={(e) => setCandidateSearch(e.target.value)}
+            />
+            {canUpload && selectedVacancyId && (
+              <Button size="sm" onClick={() => openUpload(selectedVacancyId)}>
+                <Upload className="h-4 w-4" />
+                Upload
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {filteredCandidates.length === 0 && (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No candidates match this filter.
+            </p>
+          )}
+          {filteredCandidates.slice(0, 50).map((c) => {
+            const agency = agencies.find((a) => a.id === c.agencyId);
+            const stage = getStageDefinition(c.currentStage);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setSelected(c.id)}
+                className="flex w-full items-center gap-3 rounded-2xl border border-border/50 bg-muted/20 px-3 py-3 text-left transition hover:bg-muted/40"
+              >
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={c.photoUrl} />
+                  <AvatarFallback className="text-xs">{initials(c.name)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{c.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {c.passportNumber} · {c.nationality} · {agency?.name}
+                  </p>
+                </div>
+                <div className="hidden text-right sm:block">
+                  <Badge variant="outline">{stage?.shortLabel}</Badge>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {daysBetween(c.stageEnteredAt)}d in stage
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+          {filteredCandidates.length > 50 && (
+            <p className="pt-2 text-center text-xs text-muted-foreground">
+              Showing 50 of {filteredCandidates.length} candidates
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -270,7 +543,9 @@ export default function VacanciesPage() {
                   type="number"
                   className="mt-1.5"
                   value={form.quantityRequired}
-                  onChange={(e) => setForm({ ...form, quantityRequired: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({ ...form, quantityRequired: Number(e.target.value) })
+                  }
                 />
               </div>
               <div>
@@ -359,8 +634,95 @@ export default function VacanciesPage() {
                 })}
               </div>
             </div>
-            <Button className="w-full" onClick={submit}>
+            <Button className="w-full" onClick={submitVacancy}>
               Create Vacancy
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upload Candidate</DialogTitle>
+            <DialogDescription>
+              Candidate starts at CV received from agency.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Candidate Name</Label>
+              <Input
+                className="mt-1.5"
+                value={candForm.name}
+                onChange={(e) => setCandForm({ ...candForm, name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Passport Number</Label>
+                <Input
+                  className="mt-1.5"
+                  value={candForm.passportNumber}
+                  onChange={(e) =>
+                    setCandForm({ ...candForm, passportNumber: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Nationality</Label>
+                <Select
+                  value={candForm.nationality}
+                  onValueChange={(v) => setCandForm({ ...candForm, nationality: v })}
+                >
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Assigned Vacancy</Label>
+              <Select
+                value={candForm.vacancyId}
+                onValueChange={(v) => {
+                  const vac = vacancies.find((x) => x.id === v);
+                  setCandForm({
+                    ...candForm,
+                    vacancyId: v,
+                    jobRole: vac?.jobRole || candForm.jobRole,
+                  });
+                }}
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="Select vacancy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assignedOpenVacancies.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.companyName} — {v.jobRole}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Remarks</Label>
+              <Textarea
+                className="mt-1.5"
+                value={candForm.remarks}
+                onChange={(e) => setCandForm({ ...candForm, remarks: e.target.value })}
+              />
+            </div>
+            <Button className="w-full" onClick={submitCandidate}>
+              Upload Candidate
             </Button>
           </div>
         </DialogContent>
@@ -369,13 +731,33 @@ export default function VacanciesPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({
+  label,
+  value,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  active?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <Card>
-      <CardContent className="p-5">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-2xl font-bold">{value}</p>
-      </CardContent>
-    </Card>
+    <button type="button" onClick={onClick} className="text-left">
+      <Card
+        className={cn(
+          "transition hover:shadow-neo",
+          active && "border-primary/40 ring-2 ring-primary/40"
+        )}
+      >
+        <CardContent className="p-5">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold">{value}</p>
+          <p className="mt-1 text-[11px] text-primary">
+            {active ? "Filtering · click to clear" : "Click to filter"}
+          </p>
+        </CardContent>
+      </Card>
+    </button>
   );
 }

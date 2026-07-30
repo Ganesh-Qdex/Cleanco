@@ -27,12 +27,33 @@ import type { Candidate, WorkflowStage } from "@/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+function getRejectionInfo(candidate: Candidate) {
+  const rejectedEntry = [...candidate.history]
+    .reverse()
+    .find((h) => h.status === "rejected");
+  const stageId = rejectedEntry?.stage;
+  const stageDef = stageId ? getStageDefinition(stageId) : null;
+  const reason =
+    rejectedEntry?.rejectionReason ||
+    candidate.mohreRejectionReason ||
+    candidate.icpRejectionReason ||
+    rejectedEntry?.remarks ||
+    "No reason recorded";
+
+  return {
+    stageLabel: stageDef?.shortLabel || "Unknown stage",
+    stageTitle: stageDef?.label || "Unknown stage",
+    reason,
+  };
+}
+
 export function PipelineBoard() {
   const candidates = useAppStore((s) => s.candidates);
   const agencies = useAppStore((s) => s.agencies);
   const filters = useAppStore((s) => s.filters);
   const globalSearch = useAppStore((s) => s.globalSearch);
   const moveCandidate = useAppStore((s) => s.moveCandidate);
+  const rejectCandidate = useAppStore((s) => s.rejectCandidate);
   const setSelected = useAppStore((s) => s.setSelectedCandidate);
   const user = useAuthStore((s) => s.user);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -41,30 +62,47 @@ export function PipelineBoard() {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
-  const filtered = useMemo(() => {
-    return candidates.filter((c) => {
-      if (user?.role === "agency" && user.agencyId && c.agencyId !== user.agencyId) {
+  const matchesFilters = (c: Candidate) => {
+    if (user?.role === "agency" && user.agencyId && c.agencyId !== user.agencyId) {
+      return false;
+    }
+    if (filters.nationality && c.nationality !== filters.nationality) return false;
+    if (filters.agencyId && c.agencyId !== filters.agencyId) return false;
+    if (filters.jobRole && c.jobRole !== filters.jobRole) return false;
+    if (filters.priority && c.priority !== filters.priority) return false;
+    if (globalSearch) {
+      const q = globalSearch.toLowerCase();
+      const agency = agencies.find((a) => a.id === c.agencyId);
+      if (
+        !c.name.toLowerCase().includes(q) &&
+        !c.passportNumber.toLowerCase().includes(q) &&
+        !c.jobRole.toLowerCase().includes(q) &&
+        !(agency?.name.toLowerCase().includes(q))
+      ) {
         return false;
       }
-      if (filters.nationality && c.nationality !== filters.nationality) return false;
-      if (filters.agencyId && c.agencyId !== filters.agencyId) return false;
-      if (filters.jobRole && c.jobRole !== filters.jobRole) return false;
+    }
+    return true;
+  };
+
+  const filtered = useMemo(() => {
+    return candidates.filter((c) => {
+      if (!matchesFilters(c)) return false;
+      if (c.currentStage === "completed" || c.currentStage === "rejected") return false;
       if (filters.stage && c.currentStage !== filters.stage) return false;
-      if (filters.priority && c.priority !== filters.priority) return false;
-      if (globalSearch) {
-        const q = globalSearch.toLowerCase();
-        const agency = agencies.find((a) => a.id === c.agencyId);
-        if (
-          !c.name.toLowerCase().includes(q) &&
-          !c.passportNumber.toLowerCase().includes(q) &&
-          !c.jobRole.toLowerCase().includes(q) &&
-          !(agency?.name.toLowerCase().includes(q))
-        ) {
-          return false;
-        }
-      }
-      return c.currentStage !== "manpower_request";
+      return true;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates, filters, globalSearch, agencies, user]);
+
+  const rejectedCandidates = useMemo(() => {
+    return candidates.filter((c) => {
+      if (c.currentStage !== "rejected") return false;
+      if (!matchesFilters(c)) return false;
+      if (filters.stage && filters.stage !== "rejected") return false;
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candidates, filters, globalSearch, agencies, user]);
 
   const byStage = useMemo(() => {
@@ -72,17 +110,13 @@ export function PipelineBoard() {
     PIPELINE_COLUMNS.forEach((s) => {
       map[s.id] = [];
     });
-    map["completed"] = [];
-    map["rejected"] = [];
     filtered.forEach((c) => {
       if (map[c.currentStage]) map[c.currentStage].push(c);
-      else if (c.currentStage === "completed") map.completed.push(c);
-      else if (c.currentStage === "rejected") map.rejected.push(c);
     });
     return map;
   }, [filtered]);
 
-  const activeCandidate = filtered.find((c) => c.id === activeId);
+  const activeCandidate = candidates.find((c) => c.id === activeId);
 
   const onDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
 
@@ -95,24 +129,29 @@ export function PipelineBoard() {
     const candidate = candidates.find((c) => c.id === candidateId);
     if (!candidate || candidate.currentStage === toStage) return;
 
-    if (!canTransition(candidate.currentStage, user.role)) {
-      toast.error("Your role cannot move this candidate");
+    if (user.role === "agency") {
+      toast.error("Agency cannot update pipeline stages — use candidate upload");
       return;
     }
 
-    // Agency cannot move to government stages
-    if (user.role === "agency") {
-      const allowed: WorkflowStage[] = [
-        "cv_received",
-        "signed_offer",
-        "candidate_signs_mol",
-        "visa_shared_agency",
-        "completed",
-      ];
-      if (!allowed.includes(toStage)) {
-        toast.error("Agency cannot update government stages");
-        return;
-      }
+    if (toStage === "rejected") {
+      rejectCandidate(candidateId, "Rejected via pipeline board", user.name);
+      toast.error("Candidate moved to Rejected");
+      return;
+    }
+
+    if (candidate.currentStage === "rejected") {
+      moveCandidate(candidateId, toStage, {
+        remarks: `Reopened into ${getStageDefinition(toStage)?.label}`,
+        actor: user.name,
+      });
+      toast.success(`Reopened → ${getStageDefinition(toStage)?.shortLabel}`);
+      return;
+    }
+
+    if (!canTransition(candidate.currentStage, user.role)) {
+      toast.error("Your role cannot move this candidate");
+      return;
     }
 
     moveCandidate(candidateId, toStage, {
@@ -122,11 +161,8 @@ export function PipelineBoard() {
     toast.success(`Moved to ${getStageDefinition(toStage)?.shortLabel || toStage}`);
   };
 
-  const columns = [
-    ...PIPELINE_COLUMNS,
-    getStageDefinition("completed"),
-    getStageDefinition("rejected"),
-  ];
+  const showActiveColumns = !filters.stage || filters.stage !== "rejected";
+  const showRejectedColumn = !filters.stage || filters.stage === "rejected";
 
   return (
     <DndContext
@@ -136,18 +172,31 @@ export function PipelineBoard() {
       onDragEnd={onDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {columns.map((col) => (
+        {showActiveColumns &&
+          PIPELINE_COLUMNS.map((col) => (
+            <PipelineColumn
+              key={col.id}
+              id={col.id}
+              title={col.label}
+              color={col.color}
+              count={byStage[col.id]?.length || 0}
+              candidates={byStage[col.id] || []}
+              agencies={agencies}
+              onOpen={setSelected}
+            />
+          ))}
+        {showRejectedColumn && (
           <PipelineColumn
-            key={col.id}
-            id={col.id}
-            title={col.shortLabel}
-            color={col.color}
-            count={byStage[col.id]?.length || 0}
-            candidates={byStage[col.id] || []}
+            id="rejected"
+            title="Rejected candidates"
+            color="#EF4444"
+            count={rejectedCandidates.length}
+            candidates={rejectedCandidates}
             agencies={agencies}
             onOpen={setSelected}
+            showRejectionInfo
           />
-        ))}
+        )}
       </div>
       <DragOverlay>
         {activeCandidate && (
@@ -155,6 +204,7 @@ export function PipelineBoard() {
             candidate={activeCandidate}
             agencyName={agencies.find((a) => a.id === activeCandidate.agencyId)?.name}
             dragging
+            showRejectionInfo={activeCandidate.currentStage === "rejected"}
           />
         )}
       </DragOverlay>
@@ -170,6 +220,7 @@ function PipelineColumn({
   candidates,
   agencies,
   onOpen,
+  showRejectionInfo,
 }: {
   id: string;
   title: string;
@@ -178,6 +229,7 @@ function PipelineColumn({
   candidates: Candidate[];
   agencies: { id: string; name: string }[];
   onOpen: (id: string) => void;
+  showRejectionInfo?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -185,16 +237,29 @@ function PipelineColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex w-[280px] shrink-0 flex-col rounded-[20px] border border-border/50 bg-muted/30 shadow-inner-soft",
+        "flex w-[300px] shrink-0 flex-col rounded-[20px] border border-border/50 bg-muted/30 shadow-inner-soft",
+        showRejectionInfo && "border-red-500/30 bg-red-500/5",
         isOver && "ring-2 ring-primary/40"
       )}
     >
-      <div className="flex items-center justify-between px-3 py-3">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-          <h3 className="text-sm font-semibold">{title}</h3>
+      <div className="flex items-start justify-between gap-2 px-3 py-3">
+        <div className="flex min-w-0 items-start gap-2">
+          <span
+            className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: color }}
+          />
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold leading-snug">{title}</h3>
+            {showRejectionInfo && (
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Stage rejected from + reason
+              </p>
+            )}
+          </div>
         </div>
-        <Badge variant="muted">{count}</Badge>
+        <Badge variant={showRejectionInfo ? "destructive" : "muted"} className="shrink-0">
+          {count}
+        </Badge>
       </div>
       <ScrollArea className="h-[calc(100vh-260px)] px-2 pb-3">
         <div className="space-y-2">
@@ -204,12 +269,16 @@ function PipelineColumn({
               candidate={c}
               agencyName={agencies.find((a) => a.id === c.agencyId)?.name}
               onOpen={() => onOpen(c.id)}
+              showRejectionInfo={showRejectionInfo}
             />
           ))}
           {candidates.length > 40 && (
             <p className="px-2 py-1 text-center text-xs text-muted-foreground">
               +{candidates.length - 40} more
             </p>
+          )}
+          {candidates.length === 0 && (
+            <p className="px-2 py-6 text-center text-xs text-muted-foreground">No candidates</p>
           )}
         </div>
       </ScrollArea>
@@ -221,10 +290,12 @@ function DraggableCard({
   candidate,
   agencyName,
   onOpen,
+  showRejectionInfo,
 }: {
   candidate: Candidate;
   agencyName?: string;
   onOpen: () => void;
+  showRejectionInfo?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: candidate.id,
@@ -236,7 +307,12 @@ function DraggableCard({
 
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <CandidateCard candidate={candidate} agencyName={agencyName} onClick={onOpen} />
+      <CandidateCard
+        candidate={candidate}
+        agencyName={agencyName}
+        onClick={onOpen}
+        showRejectionInfo={showRejectionInfo}
+      />
     </div>
   );
 }
@@ -246,14 +322,17 @@ function CandidateCard({
   agencyName,
   onClick,
   dragging,
+  showRejectionInfo,
 }: {
   candidate: Candidate;
   agencyName?: string;
   onClick?: () => void;
   dragging?: boolean;
+  showRejectionInfo?: boolean;
 }) {
   const days = daysBetween(candidate.stageEnteredAt);
   const stage = getStageDefinition(candidate.currentStage);
+  const rejection = showRejectionInfo ? getRejectionInfo(candidate) : null;
 
   return (
     <motion.div
@@ -261,6 +340,7 @@ function CandidateCard({
       onClick={onClick}
       className={cn(
         "cursor-pointer rounded-2xl border border-border/60 bg-card p-3 shadow-neo-sm transition hover:shadow-neo",
+        showRejectionInfo && "border-red-500/25",
         dragging && "rotate-2 shadow-glass"
       )}
     >
@@ -277,23 +357,39 @@ function CandidateCard({
           </p>
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <Badge variant="outline" className="text-[10px]">
-          {stage?.shortLabel}
-        </Badge>
-        <Badge
-          variant={
-            candidate.priority === "urgent"
-              ? "destructive"
-              : candidate.priority === "high"
-                ? "warning"
-                : "muted"
-          }
-          className="capitalize text-[10px]"
-        >
-          {candidate.priority}
-        </Badge>
-      </div>
+
+      {rejection ? (
+        <div className="mt-3 space-y-1.5">
+          <Badge variant="destructive" className="max-w-full truncate text-[10px]" title={rejection.stageTitle}>
+            From: {rejection.stageLabel}
+          </Badge>
+          <p
+            className="rounded-xl bg-red-500/10 px-2 py-1.5 text-[11px] leading-snug text-red-600 dark:text-red-400"
+            title={rejection.reason}
+          >
+            Reason: {rejection.reason}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <Badge variant="outline" className="text-[10px]">
+            {stage?.shortLabel}
+          </Badge>
+          <Badge
+            variant={
+              candidate.priority === "urgent"
+                ? "destructive"
+                : candidate.priority === "high"
+                  ? "warning"
+                  : "muted"
+            }
+            className="capitalize text-[10px]"
+          >
+            {candidate.priority}
+          </Badge>
+        </div>
+      )}
+
       <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
         <span className="truncate">{agencyName}</span>
         <span className="flex items-center gap-1">

@@ -26,7 +26,7 @@ export default function ReportsPage() {
 
   const stats = useMemo(() => {
     const completed = candidates.filter((c) =>
-      ["completed", "visa_shared_agency", "visa_issued", "hr_processing"].includes(c.currentStage)
+      ["completed", "flight_bookings", "upload_visa"].includes(c.currentStage)
     ).length;
     const successRate = candidates.length
       ? Math.round((completed / candidates.length) * 100)
@@ -46,12 +46,10 @@ export default function ReportsPage() {
     ).length;
     const govPending = candidates.filter((c) =>
       [
-        "mohre_submitted",
-        "police_verification",
-        "mohre_approval",
-        "visa_application_icp",
-        "icp_payment",
-        "icp_decision",
+        "upload_preapproved_mol",
+        "stage2_signed_nawakis",
+        "mohre_approved",
+        "upload_visa",
       ].includes(c.currentStage)
     ).length;
 
@@ -73,7 +71,7 @@ export default function ReportsPage() {
       const done = candidates.filter(
         (c) =>
           c.agencyId === a.id &&
-          ["completed", "visa_shared_agency", "visa_issued"].includes(c.currentStage)
+          ["completed", "flight_bookings", "upload_visa"].includes(c.currentStage)
       ).length;
       return {
         name: a.name.split(" ").slice(0, 2).join(" "),

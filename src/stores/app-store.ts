@@ -33,6 +33,8 @@ interface AppState {
     stage: string;
     priority: string;
     visaStatus: string;
+    vacancyId: string;
+    vacancyStatus: string;
   };
   setSearch: (q: string) => void;
   setFilters: (f: Partial<AppState["filters"]>) => void;
@@ -102,6 +104,8 @@ export const useAppStore = create<AppState>()(
         stage: "",
         priority: "",
         visaStatus: "",
+        vacancyId: "",
+        vacancyStatus: "",
       },
       setSearch: (q) => set({ globalSearch: q }),
       setFilters: (f) => set({ filters: { ...get().filters, ...f } }),
@@ -228,13 +232,13 @@ export const useAppStore = create<AppState>()(
 
         if (meta.offerIssueDate) patch.offerIssueDate = meta.offerIssueDate;
         if (meta.visaFileName) patch.visaFileName = meta.visaFileName;
-        if (toStage === "mohre_approval") {
-          patch.mohreStatus = meta.decision === "rejected" ? "rejected" : "pending";
+        if (toStage === "mohre_approved") {
+          patch.mohreStatus = meta.decision === "rejected" ? "rejected" : "approved";
         }
-        if (meta.decision === "approved" && candidate.currentStage === "mohre_approval") {
+        if (meta.decision === "approved" && candidate.currentStage === "mohre_approved") {
           patch.mohreStatus = "approved";
         }
-        if (meta.decision === "approved" && candidate.currentStage === "icp_decision") {
+        if (meta.decision === "approved" && candidate.currentStage === "upload_visa") {
           patch.icpStatus = "approved";
         }
         if (meta.paymentAmount === 1800) {
@@ -262,11 +266,11 @@ export const useAppStore = create<AppState>()(
           };
         }
         if (meta.rejectionReason) {
-          if (candidate.currentStage === "mohre_approval" || toStage === "rejected") {
+          if (candidate.currentStage === "mohre_approved" || toStage === "rejected") {
             patch.mohreRejectionReason = meta.rejectionReason;
             patch.mohreStatus = "rejected";
           }
-          if (candidate.currentStage === "icp_decision") {
+          if (candidate.currentStage === "upload_visa") {
             patch.icpRejectionReason = meta.rejectionReason;
             patch.icpStatus = "rejected";
           }
@@ -337,7 +341,7 @@ export const useAppStore = create<AppState>()(
         })),
     }),
     {
-      name: "cleanco-app-data",
+      name: "cleanco-app-data-v2",
       skipHydration: true,
       partialize: (s) => ({
         agencies: s.agencies,

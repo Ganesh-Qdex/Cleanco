@@ -16,14 +16,9 @@ export default function GovernmentPage() {
   const mohre = useMemo(() => {
     const pending = candidates.filter((c) =>
       [
-        "mohre_submitted",
-        "police_verification",
-        "labour_contract",
-        "download_mohre_offer",
-        "send_mol_agency",
-        "candidate_signs_mol",
-        "upload_signed_mol",
-        "mohre_approval",
+        "upload_preapproved_mol",
+        "stage2_signed_nawakis",
+        "mohre_approved",
       ].includes(c.currentStage)
     );
     const approved = candidates.filter((c) => c.mohreStatus === "approved");
@@ -34,9 +29,7 @@ export default function GovernmentPage() {
   }, [candidates]);
 
   const icp = useMemo(() => {
-    const pending = candidates.filter((c) =>
-      ["visa_application_icp", "icp_payment", "icp_decision"].includes(c.currentStage)
-    );
+    const pending = candidates.filter((c) => c.currentStage === "upload_visa");
     const approved = candidates.filter((c) => c.icpStatus === "approved");
     const rejected = candidates.filter(
       (c) => c.icpStatus === "rejected" || (c.currentStage === "rejected" && c.icpRejectionReason)
