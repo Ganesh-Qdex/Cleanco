@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard, StatsRow } from "@/components/ui/stat-card";
 import { useAppStore } from "@/stores/app-store";
 import { daysBetween } from "@/lib/utils";
 
@@ -110,20 +111,20 @@ export default function ReportsPage() {
         </p>
       </div>
 
-      <div className="page-grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric title="Visa Success Rate" value={`${stats.successRate}%`} />
-        <Metric title="Avg Processing Time" value={`${stats.avgDays} days`} />
-        <Metric title="Pending Gov Cases" value={String(stats.govPending)} />
-        <Metric title="Payment Pending" value={String(stats.paymentPending)} />
-      </div>
+      <StatsRow columns={4}>
+        <StatCard label="Visa Success Rate" value={`${stats.successRate}%`} />
+        <StatCard label="Avg Processing Time" value={`${stats.avgDays} days`} />
+        <StatCard label="Pending Gov Cases" value={String(stats.govPending)} />
+        <StatCard label="Payment Pending" value={String(stats.paymentPending)} />
+      </StatsRow>
 
-      <div className="page-grid grid-cols-1 lg:grid-cols-2">
+      <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Rejection Analysis</CardTitle>
             <CardDescription>MOHRE / ICP rejection reasons</CardDescription>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="h-72 pt-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.rejectionData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -190,16 +191,5 @@ export default function ReportsPage() {
         </Card>
       </div>
     </div>
-  );
-}
-
-function Metric({ title, value }: { title: string; value: string }) {
-  return (
-    <Card>
-      <CardContent className="p-5">
-        <p className="text-xs text-muted-foreground">{title}</p>
-        <p className="text-2xl font-bold">{value}</p>
-      </CardContent>
-    </Card>
   );
 }

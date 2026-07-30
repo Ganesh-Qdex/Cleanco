@@ -1,7 +1,6 @@
 "use client";
 
 import { PipelineBoard } from "@/components/pipeline/pipeline-board";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -42,104 +41,104 @@ export default function PipelinePage() {
         <p className="page-subtitle">{subtitle}</p>
       </div>
 
-      <Card>
-        <CardContent className={`grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 ${filterCols}`}>
-          <Input
-            placeholder="Search pipeline..."
-            value={globalSearch}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-11 min-w-0"
-          />
+      <div
+        className={`grid w-full grid-cols-1 items-center gap-3 rounded-[24px] bg-card p-4 shadow-neo-inset sm:grid-cols-2 ${filterCols}`}
+      >
+        <Input
+          placeholder="Search pipeline..."
+          value={globalSearch}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-11 min-w-0 shadow-neo-sm"
+        />
+        <Select
+          value={filters.nationality || "all"}
+          onValueChange={(v) => setFilters({ nationality: v === "all" ? "" : v })}
+        >
+          <SelectTrigger className="h-11 w-full min-w-0 shadow-neo-sm">
+            <SelectValue placeholder="Nationality" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Nationalities</SelectItem>
+            {COUNTRIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {!isAgency && (
           <Select
-            value={filters.nationality || "all"}
-            onValueChange={(v) => setFilters({ nationality: v === "all" ? "" : v })}
+            value={filters.agencyId || "all"}
+            onValueChange={(v) => setFilters({ agencyId: v === "all" ? "" : v })}
           >
-            <SelectTrigger className="h-11 w-full">
-              <SelectValue placeholder="Nationality" />
+            <SelectTrigger className="h-11 w-full min-w-0 shadow-neo-sm">
+              <SelectValue placeholder="Agency" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Nationalities</SelectItem>
-              {COUNTRIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
+              <SelectItem value="all">All Agencies</SelectItem>
+              {agencies.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {!isAgency && (
-            <Select
-              value={filters.agencyId || "all"}
-              onValueChange={(v) => setFilters({ agencyId: v === "all" ? "" : v })}
-            >
-              <SelectTrigger className="h-11 w-full">
-                <SelectValue placeholder="Agency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Agencies</SelectItem>
-                {agencies.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {!isPro && !isAgency && (
-            <Select
-              value={filters.jobRole || "all"}
-              onValueChange={(v) => setFilters({ jobRole: v === "all" ? "" : v })}
-            >
-              <SelectTrigger className="h-11 w-full">
-                <SelectValue placeholder="Job Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {JOB_ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+        )}
+        {!isPro && !isAgency && (
           <Select
-            value={filters.stage || "all"}
-            onValueChange={(v) => setFilters({ stage: v === "all" ? "" : v })}
+            value={filters.jobRole || "all"}
+            onValueChange={(v) => setFilters({ jobRole: v === "all" ? "" : v })}
           >
-            <SelectTrigger className="h-11 w-full">
-              <SelectValue placeholder="Stage" />
+            <SelectTrigger className="h-11 w-full min-w-0 shadow-neo-sm">
+              <SelectValue placeholder="Job Role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Stages</SelectItem>
-              {columns.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.shortLabel}
+              <SelectItem value="all">All Roles</SelectItem>
+              {JOB_ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
                 </SelectItem>
               ))}
-              {!isPro && !isAgency && <SelectItem value="rejected">Rejected</SelectItem>}
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            className="h-11 w-full"
-            onClick={() => {
-              setFilters({
-                nationality: "",
-                agencyId: "",
-                jobRole: "",
-                stage: "",
-                priority: "",
-                visaStatus: "",
-                vacancyId: "",
-                vacancyStatus: "",
-              });
-              setSearch("");
-            }}
-          >
-            Clear Filters
-          </Button>
-        </CardContent>
-      </Card>
+        )}
+        <Select
+          value={filters.stage || "all"}
+          onValueChange={(v) => setFilters({ stage: v === "all" ? "" : v })}
+        >
+          <SelectTrigger className="h-11 w-full min-w-0 shadow-neo-sm">
+            <SelectValue placeholder="Stage" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stages</SelectItem>
+            {columns.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.shortLabel}
+              </SelectItem>
+            ))}
+            {!isPro && !isAgency && <SelectItem value="rejected">Rejected</SelectItem>}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          className="h-11 w-full"
+          onClick={() => {
+            setFilters({
+              nationality: "",
+              agencyId: "",
+              jobRole: "",
+              stage: "",
+              priority: "",
+              visaStatus: "",
+              vacancyId: "",
+              vacancyStatus: "",
+            });
+            setSearch("");
+          }}
+        >
+          Clear Filters
+        </Button>
+      </div>
 
       <PipelineBoard />
     </div>
