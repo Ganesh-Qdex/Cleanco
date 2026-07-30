@@ -21,6 +21,12 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useUIStore } from "@/stores/ui-store";
 import type { UserRole } from "@/types";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const SIDEBAR_W_COLLAPSED = 72;
 export const SIDEBAR_W_EXPANDED = 240;
@@ -50,7 +56,7 @@ export function Sidebar() {
   const collapsed = sidebarCollapsed;
 
   return (
-    <>
+    <TooltipProvider delayDuration={150} skipDelayDuration={0}>
       {!collapsed && (
         <button
           type="button"
@@ -74,9 +80,16 @@ export function Sidebar() {
             collapsed ? "justify-center px-0" : "gap-3 px-4"
           )}
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card text-sm font-bold shadow-neo-sm">
-            C
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex h-10 w-10 shrink-0 cursor-default items-center justify-center rounded-full bg-card text-sm font-bold shadow-neo-sm">
+                C
+              </div>
+            </TooltipTrigger>
+            {collapsed && (
+              <TooltipContent side="right">Cleanco</TooltipContent>
+            )}
+          </Tooltip>
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
@@ -105,11 +118,10 @@ export function Sidebar() {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
-            return (
+
+            const link = (
               <Link
-                key={item.href}
                 href={item.href}
-                title={item.label}
                 onClick={() => {
                   if (typeof window !== "undefined" && window.innerWidth < 1024) {
                     setSidebarCollapsed(true);
@@ -147,26 +159,41 @@ export function Sidebar() {
                 )}
               </Link>
             );
+
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={10}>
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            );
           })}
         </nav>
 
         <div className={cn("shrink-0 p-2", collapsed && "flex justify-center")}>
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            className={cn(
-              "hidden items-center justify-center gap-2 rounded-full bg-card text-xs text-muted-foreground shadow-neo-sm hover:text-foreground lg:flex",
-              collapsed ? "h-11 w-11" : "h-10 w-full px-3"
-            )}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <ChevronLeft
-              className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")}
-            />
-            {!collapsed && <span>Collapse</span>}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className={cn(
+                  "hidden items-center justify-center gap-2 rounded-full bg-card text-xs text-muted-foreground shadow-neo-sm hover:text-foreground lg:flex",
+                  collapsed ? "h-11 w-11" : "h-10 w-full px-3"
+                )}
+              >
+                <ChevronLeft
+                  className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")}
+                />
+                {!collapsed && <span>Collapse</span>}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={10}>
+              {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </aside>
-    </>
+    </TooltipProvider>
   );
 }
